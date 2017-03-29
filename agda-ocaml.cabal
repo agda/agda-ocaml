@@ -1,5 +1,5 @@
-name:                agda2mlf
-version:             0.1.0.0
+name:                agda-ocaml
+version:             0.2.0.0
 synopsis:            -
 description:         Agda to Ocaml
 license:             BSD3
@@ -33,14 +33,22 @@ library
                      , uniplate == 1.6.*
   default-language:    Haskell2010
 
-test-suite agda2mlf-test
+executable agda-ocaml
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , agda-ocaml
+  default-language:    Haskell2010
+
+test-suite agda-ocaml-test
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test/agda2mlf
+  hs-source-dirs:      test/agda-ocaml
   other-modules:       CompilerTest
                      , Utils
   main-is:             Tasty.hs
   build-depends:       Agda
-                     , agda2mlf
+                     , agda-ocaml
                      , base
                      , bytestring == 0.10.*
                      , containers == 0.5.*
@@ -53,8 +61,8 @@ test-suite agda2mlf-test
   -- ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
-executable agda2mlf-bench
-  hs-source-dirs:      benchmark/agda2mlf
+executable agda-ocaml-bench
+  hs-source-dirs:     benchmark/agda-ocaml
   other-modules:      RedBlack
                     , Typed
                     , TypedExist
@@ -70,4 +78,4 @@ executable agda2mlf-bench
 
 source-repository head
   type:     git
-  location: git@gitlab.com:janmasrovira/agda2mlf.git
+  location: git@github.com:agda/agda-ocaml.git

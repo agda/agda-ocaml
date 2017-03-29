@@ -58,13 +58,13 @@ runModPrintInts ids = runMod . withPrintInts ids
 
 -- | Compiles an to an executable and executes it.
 --
--- Note that this method uses the executable named `agda2mlf` as registered with
+-- Note that this method uses the executable named `agda-ocaml` as registered with
 -- `stack`.
 compileRunPrint :: FilePath -> Ident -> IO String
 compileRunPrint agdap var =
   withSystemTempFile "module.mlf" $
     \mlfp mlfh -> do
-      callProcess "stack" ["exec", "agda2mlf", "--", "-v0", "--mlf", agdap
+      callProcess "stack" ["exec", "agda-ocaml", "--", "-v0", "--mlf", agdap
                           , "-o", mlfp, "--print-var", var]
       runModFile' mlfp mlfh
 
@@ -72,7 +72,7 @@ compileRun :: FilePath -> IO String
 compileRun agdap =
   withSystemTempFile "module.mlf" $
     \mlfp mlfh -> do
-      callProcess "stack" ["exec", "agda2mlf", "--", "-v0", "--mlf", agdap
+      callProcess "stack" ["exec", "agda-ocaml", "--", "-v0", "--mlf", agdap
                           , "-o", mlfp]
       runModFile' mlfp mlfh
 

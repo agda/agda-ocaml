@@ -49,7 +49,7 @@ do
         stack exec runhaskell -- tmp.hs > TheList.agda
         cpp Fold0.agda Fold.agda
         sed '/^#/ d' Fold.agda -i
-        stack exec agda2mlf -- -c RedBlack.agda > /dev/null
+        stack exec agda-ocaml -- -c RedBlack.agda > /dev/null
         cp RedBlack MAlonzox
         stop_spinner $?
 
@@ -58,7 +58,7 @@ do
         # stack exec runhaskell -- tmp.hs > TheList.agda
         # cpp Fold0.agda -Dstrict Fold.agda
         # sed '/^#/ d' Fold.agda -i
-        # stack exec agda2mlf -- -c RedBlack.agda > /dev/null
+        # stack exec agda-ocaml -- -c RedBlack.agda > /dev/null
         # cp RedBlack MAlonzoStrict
         # stop_spinner $?
 
@@ -67,7 +67,7 @@ do
         # stack exec runhaskell -- tmp.hs > TheList.agda
         # cpp Fold0.agda -Dtail -Dstrict Fold.agda
         # sed '/^#/ d' Fold.agda -i
-        # stack exec agda2mlf -- --mlf RedBlack.agda --compilemlf=MalfunctionStrict -o RedBlack.mlf > /dev/null
+        # stack exec agda-ocaml -- --mlf RedBlack.agda --compilemlf=MalfunctionStrict -o RedBlack.mlf > /dev/null
         # stop_spinner $?
 
         start_spinner "Compiling Mlf"
@@ -75,7 +75,7 @@ do
         stack exec runhaskell -- tmp.hs > TheList.agda
         cpp Fold0.agda -Dtail Fold.agda
         sed '/^#/ d' Fold.agda -i
-        stack exec agda2mlf -- --mlf RedBlack.agda --compilemlf=Malfunction -o RedBlack.mlf > /dev/null
+        stack exec agda-ocaml -- --mlf RedBlack.agda --compilemlf=Malfunction -o RedBlack.mlf > /dev/null
         stop_spinner $?
 
 
