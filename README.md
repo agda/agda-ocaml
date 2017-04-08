@@ -40,4 +40,8 @@ Benchmarking:
 
     stack exec agda-ocaml-bench
 
+The benchmarks depend on [agda-prelude] - so download that and add it to
+your default libraries.
+
 [malfunction]: https://github.com/stedolan/malfunction
+[agda-prelude]: https://github.com/UlfNorell/agda-prelude
