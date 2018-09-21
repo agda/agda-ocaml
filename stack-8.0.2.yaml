@@ -4,7 +4,7 @@ packages:
 - '.'
 - location:
     git: "https://github.com/agda/agda.git"
-    commit: 26b7e75f08c331b356281328a562885f997a0d84
+    commit: 134c12885c7b7928a85f8abfd5503b67a0f9e633
   extra-dep: true
 - location:
     git: "https://git.coop/lwm/tasty-discover.git"

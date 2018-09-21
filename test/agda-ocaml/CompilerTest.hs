@@ -82,7 +82,7 @@ test_translate =
     (aName, anIden) = qnameAndIdent 0 "someId"
 
 facTT :: QName -> TTerm
-facTT qn = TLam (TCase 0 CTNat (TLet (TApp (TPrim PSub)
+facTT qn = TLam (TCase 0 (CaseInfo { caseType = CTNat , caseLazy = False }) (TLet (TApp (TPrim PSub)
       [TVar 0,TLit (LitNat undefined 1)]
       ) (TApp (TPrim PMul) [TVar 1,TApp (TDef qn) [TVar 0]])
   ) [TALit {aLit = LitNat undefined 0, aBody = TLit (LitNat undefined 1)}])

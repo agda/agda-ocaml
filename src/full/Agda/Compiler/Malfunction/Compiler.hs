@@ -170,6 +170,7 @@ translateTerm tt = case tt of
     (var, t1') <- introVar (translateTerm t1)
     return (Mlet [Named var t0'] t1')
   -- @deflt@ is the default value if all @alt@s fail.
+  -- TODO Handle the case where this is a lazy match if possible.
   TCase i _ deflt alts -> do
     t <- indexToVarTerm i
     alts' <- alternatives t
