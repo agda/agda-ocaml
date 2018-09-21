@@ -4,7 +4,7 @@ packages:
 - '.'
 - location:
     git: "https://github.com/agda/agda.git"
-    commit: 8f19716ed22bade700ed5e182906175d16130207
+    commit: feb33d191b784d98f5b2955b7e3b71e6948ec271
   extra-dep: true
 - location:
     git: "https://git.coop/lwm/tasty-discover.git"
@@ -13,6 +13,7 @@ packages:
 
 extra-deps:
   - tasty-th-0.1.4
+  - cpphs-1.20.8
 
 flags: {}
 

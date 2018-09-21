@@ -192,6 +192,10 @@ level a b = sep [ "(" <+> a, nst b, ")" ]
 levelPlus :: Doc -> [Doc] -> Doc
 levelPlus a bs = sep $ [ "(" <+> a ] ++ map nst bs ++ [")"]
 
+-- This is a list that has no comma or brackets.
+prettyList__ :: Pretty a => [ a ] -> Doc
+prettyList__ = fsep . map pretty
+
 instance Pretty Mod where
   pretty (MMod bs ts) = levelPlus "module" (map pretty bs ++ [levelPlus "export" (map pretty ts)])
   prettyPrec _ = pretty
@@ -201,7 +205,7 @@ instance Pretty Term where
     Mvar i              -> prettyIdent i
     Mlambda is t        -> level ("lambda" <+> parens (hsep (map prettyIdent is))) (pretty t)
     Mapply t ts         -> levelPlus ("apply " <> pretty t) (map pretty ts)
-    Mlet bs t           -> level "let" (prettyList bs $$ pretty t)
+    Mlet bs t           -> level "let" (prettyList__ bs $$ pretty t)
     Mint ic             -> pretty ic
     Mstring s           -> textShow s
     Mglobal li          -> parens $ "global" <+> prettyLongident li
@@ -216,7 +220,7 @@ instance Pretty Term where
     Mvecset _tp t0 t1 t2 -> levelPlus "store" [pretty t0, pretty t1, pretty t2]
     Mveclen _tp t0       -> level "length" (pretty t0)
     -- Blocks
-    Mblock i ts         -> level ("block" <+> parens ("tag" <+> pretty i)) (prettyList ts)
+    Mblock i ts         -> level ("block" <+> parens ("tag" <+> pretty i)) (prettyList__ ts)
     Mfield i t0         -> parens $ "field" <+> pretty i <+> pretty t0
   prettyPrec _ = pretty
 
@@ -243,7 +247,7 @@ prettyIdent :: Ident -> Doc
 prettyIdent = text . ('$':)
 
 prettyCaseExpression :: ([Case], Term) -> Doc
-prettyCaseExpression (cs, t) = level (prettyList cs) (pretty t)
+prettyCaseExpression (cs, t) = level (prettyList__ cs) (pretty t)
 
 instance Pretty Case where
   pretty c = case c of
