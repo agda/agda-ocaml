@@ -60,6 +60,7 @@ import           Numeric (showHex)
 import           Data.Char
 
 import           Agda.Compiler.Malfunction.AST
+import           Agda.Compiler.Malfunction.EraseDefs
 import qualified Agda.Compiler.Malfunction.Primitive as Primitive
 
 -- TODO Remove this
@@ -317,8 +318,6 @@ translateLit l = case l of
   LitNat _ x -> Mint (CBigint x)
   LitString _ s -> Mstring s
   LitChar _ c -> Mint . CInt . fromEnum $ c
-  -- TODO It would be better if we had a compile error.
-  LitWord64 _ _ -> errorT "unsupported literal type"
   _ -> error "unsupported literal type"
 
 translatePrimApp :: TPrim -> [Term] -> Term
@@ -366,8 +365,7 @@ translatePrimApp tp args =
     -- wrong = return $ errorT $ "stub : " ++ show tp
     -- TODO The RedBlack.agda test gave 3 args in pseq where the last one was unreachable.
     wrongargs = errorT $ "unexpected number of arguments : " ++ prettyShow args ++ " Report this error."
-    -- Given that Word64 is inserted into Code that does not use it, I have opted for a runtime error.
-    notSupported = errorT "Not supported by the OCaml backend."
+    notSupported = error "Not supported by the OCaml backend."
     wrong = undefined
 
 
@@ -556,7 +554,7 @@ compile env bs = runTranslate (compileM bs) env
 compileM :: MonadReader Env m => [(QName, TTerm)] -> m Mod
 compileM allDefs = do
   bs <- mapM translateSCC recGrps
-  return $ MMod bs []
+  return $ MMod (eraseB bs) []
   where
     translateSCC scc = case scc of
       AcyclicSCC single -> uncurry translateBinding single
