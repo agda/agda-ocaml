@@ -62,6 +62,9 @@ import           Data.Char
 import           Agda.Compiler.Malfunction.AST
 import qualified Agda.Compiler.Malfunction.Primitive as Primitive
 
+-- TODO Remove this
+import Agda.Utils.Pretty
+
 data Env = Env
   { _conMap :: Map NameId ConRep
   , _qnameConcreteMap :: Map NameId String
@@ -313,7 +316,9 @@ translateLit :: Literal -> Term
 translateLit l = case l of
   LitNat _ x -> Mint (CBigint x)
   LitString _ s -> Mstring s
-  LitChar _ c-> Mint . CInt . fromEnum $ c
+  LitChar _ c -> Mint . CInt . fromEnum $ c
+  -- TODO It would be better if we had a compile error.
+  LitWord64 _ _ -> errorT "unsupported literal type"
   _ -> error "unsupported literal type"
 
 translatePrimApp :: TPrim -> [Term] -> Term
@@ -333,6 +338,16 @@ translatePrimApp tp args =
     PEqQ -> wrong
     PIf -> wrong
     PSeq -> pseq
+-- OCaml does not support unsigned Integers.
+    PAdd64 -> notSupported
+    PSub64 -> notSupported
+    PMul64 -> notSupported
+    PQuot64 -> notSupported
+    PRem64 -> notSupported
+    PLt64 -> notSupported
+    PEq64 -> notSupported
+    PITo64 -> notSupported
+    P64ToI -> notSupported
   where
     aType = TInt
     intbinop op = case args of
@@ -341,6 +356,7 @@ translatePrimApp tp args =
       [] -> Mlambda ["a", "b"] $ Mintop2 op aType (Mvar "a") (Mvar "b")
       _ -> wrongargs
     -- NOTE: pseq is simply (\a b -> b) because malfunction is a strict language
+    -- TODO : Use seq from the malfunction spec.
     pseq      = case args of
       [_, b] -> b
       [_] -> Mlambda ["b"] $ Mvar "b"
@@ -348,7 +364,10 @@ translatePrimApp tp args =
       _ -> wrongargs
     -- TODO: Stub!
     -- wrong = return $ errorT $ "stub : " ++ show tp
-    wrongargs = error "unexpected number of arguments"
+    -- TODO The RedBlack.agda test gave 3 args in pseq where the last one was unreachable.
+    wrongargs = errorT $ "unexpected number of arguments : " ++ prettyShow args ++ " Report this error."
+    -- Given that Word64 is inserted into Code that does not use it, I have opted for a runtime error.
+    notSupported = errorT "Not supported by the OCaml backend."
     wrong = undefined
 
 

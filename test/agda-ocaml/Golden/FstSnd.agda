@@ -2,7 +2,7 @@ module Golden.FstSnd where
 
 open import Agda.Builtin.Nat
 
-data Tuple a b : Set where
+data Tuple (a b : Set) : Set where
   Tup : a -> b -> Tuple a b
 
 fst : {a b : Set} -> Tuple a b -> a

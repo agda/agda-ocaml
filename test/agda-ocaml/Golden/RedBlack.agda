@@ -1,6 +1,16 @@
 module Golden.RedBlack where
 
-open import Prelude hiding (insert)
+open import Prelude.Equality
+open import Prelude.Ord
+open import Prelude.Function
+open import Prelude.Empty
+open import Prelude.Unit
+open import Prelude.Product
+open import Prelude.Nat
+open import Prelude.String
+open import Prelude.Show
+open import Prelude.IO
+open import Prelude.List hiding (insert)
 
 -- Version of comparison that lets us use instance search for the proof objects.
 data Comparison! {a} {A : Set a} (_<_ : A → A → Set a) (x y : A) : Set a where

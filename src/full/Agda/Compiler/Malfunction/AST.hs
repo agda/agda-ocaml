@@ -236,9 +236,9 @@ instance Pretty Binding where
 instance Pretty IntConst where
   pretty ic = case ic of
     CInt    i -> pretty i
-    CInt32  i -> pretty i
-    CInt64  i -> textShow i
-    CBigint i -> pretty i
+    CInt32  i -> pretty i <.> "i32"
+    CInt64  i -> textShow i <.> "i64"
+    CBigint i -> pretty i <.> "ibig"
 
 prettyLongident :: Longident -> Doc
 prettyLongident = hsep . map prettyIdent
@@ -259,27 +259,28 @@ instance Pretty Case where
 
 instance Pretty UnaryIntOp where
   pretty op = case op of
-    Neg -> "?"
-    Not -> "?"
+    Neg -> "?.ibig"
+    Not -> "?.ibig"
 
 instance Pretty BinaryIntOp where
   pretty op = case op of
-    Add -> "+"
-    Sub -> "-"
-    Mul -> "*"
-    Div -> "/"
-    Mod -> "%"
-    And -> "&"
-    Or  -> "|"
-    Xor -> "^"
-    Lsl -> "<<"
-    Lsr -> ">>"
-    Asr  -> "a>>"
-    Lt  -> "<"
-    Gt  -> ">"
-    Lte -> "<="
-    Gte -> ">="
-    Eq  -> "=="
+    Add -> "+.ibig"
+    Sub -> "-.ibig"
+    Mul -> "*.ibig"
+    Div -> "/.ibig"
+    Mod -> "%.ibig"
+    And -> "&.ibig"
+    Or  -> "|.ibig"
+    Xor -> "^.ibig"
+    Lsl -> "<<.ibig"
+    Lsr -> ">>.ibig"
+    Asr  -> "a>>.ibig"
+    Lt  -> "<.ibig"
+    Gt  -> ">.ibig"
+    Lte -> "<=.ibig"
+    Gte -> ">=.ibig"
+    Eq  -> "==.ibig"
+
 
 prettyTypedTerm :: IntType -> Term -> Doc
 prettyTypedTerm tp t = case tp of
