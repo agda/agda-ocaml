@@ -46,6 +46,7 @@ do
 
         start_spinner "Compiling MAlonzo"
         cpp AgdaListGen.hs -Dtail -Dlen=$len -D$order > tmp.hs
+        sed '/^#/ d' tmp.hs -i
         stack exec runhaskell -- tmp.hs > TheList.agda
         cpp Fold0.agda Fold.agda
         sed '/^#/ d' Fold.agda -i
@@ -72,6 +73,7 @@ do
 
         start_spinner "Compiling Mlf"
         cpp AgdaListGen.hs -Dtail -Dlen=$len -D$order > tmp.hs
+        sed '/^#/ d' tmp.hs -i
         stack exec runhaskell -- tmp.hs > TheList.agda
         cpp Fold0.agda -Dtail Fold.agda
         sed '/^#/ d' Fold.agda -i
@@ -127,6 +129,6 @@ do
     printf "\nBenchmark for $order\n"
     cat $allfile
     cp plot.plt $outdir
-    (cd $outdir && gnuplot plot.plt)
+    (cd $outdir && gnuplot -p plot.plt)
     echo ""
 done

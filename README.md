@@ -38,10 +38,16 @@ Testing:
 
 Benchmarking:
 
+[CPU Benchmark](bench_images/CPU.png)
+[Memory Benchmark](bench_images/memory.png)
+
+
     stack exec agda-ocaml-bench
 
 The benchmarks depend on [agda-prelude] - so download that and add it to
 your default libraries.
+You also need to install the "time" package in the Debian OS.
+
 
 [malfunction]: https://github.com/stedolan/malfunction
 [agda-prelude]: https://github.com/UlfNorell/agda-prelude
