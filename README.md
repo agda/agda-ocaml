@@ -46,7 +46,7 @@ Benchmarking:
 
 The benchmarks depend on [agda-prelude] - so download that and add it to
 your default libraries.
-You also need to install the "time" package in the Debian OS.
+You also need to install the "time" and "gnuplot" package in the Debian OS.
 
 
 [malfunction]: https://github.com/stedolan/malfunction
