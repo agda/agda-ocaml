@@ -52,7 +52,7 @@ primitives = Map.fromList
   , "primIntegerLess"     |-> binOp Lt
   , notMapped "primIntegerAbs"
   , notMapped "primNatToInteger"
-  , "primShowInteger"     |-> Mglobal ["Pervasives", "string_of_int"]
+  , "primShowInteger"     |-> Mglobal ["Z", "to_string"]
 
   -- Natural number functions
   , "primNatPlus"         |-> binOp Add
