@@ -2,7 +2,12 @@
 module Agda.Compiler.Malfunction (backend) where
 
 import           Agda.Compiler.Backend
+import           Agda.Compiler.CallCompiler
+import           Agda.Compiler.Common
 import           Agda.Utils.Pretty
+import           Agda.Utils.String
+import           Agda.Utils.FileName
+import           Agda.Utils.Impossible
 import           Control.Monad
 import           Control.Monad.Extra
 import           Control.Monad.Trans
@@ -21,6 +26,9 @@ import qualified Data.Set                            as Set
 import           Numeric                             (showHex)
 import           System.Console.GetOpt
 import           Text.Printf
+import           System.FilePath.Posix
+import           System.Directory
+
 
 import           Agda.Compiler.Malfunction.AST
 import qualified Agda.Compiler.Malfunction.Compiler  as Mlf
@@ -29,57 +37,62 @@ import           Agda.Compiler.Malfunction.Run
 import qualified Agda.Compiler.Malfunction.Run       as Run
 import           Agda.Syntax.Common                  (NameId)
 
+
+_IMPOSSIBLE :: a
+_IMPOSSIBLE = error "IMPOSSIBLE"
+
+
 backend :: Backend
 backend = Backend backend'
 
 data MlfOptions = Opts
-  { _enabled    :: Bool
-  , _resultVar  :: Maybe Ident
-  , _outputFile :: Maybe FilePath
-  , _outputMlf  :: Maybe FilePath
-  , _debug      :: Bool
+  { optMLFCompile    :: Bool
+  , optCallMLF       :: Bool
+  , optDebugMLF      :: Bool
   }
 
 defOptions :: MlfOptions
 defOptions = Opts
-  { _enabled    = False
-  , _resultVar  = Nothing
-  , _outputFile = Nothing
-  , _outputMlf  = Nothing
-  , _debug      = False
+  { optMLFCompile    = False
+  , optCallMLF       = True
+  , optDebugMLF      = False
   }
+
 
 ttFlags :: [OptDescr (Flag MlfOptions)]
 ttFlags =
-  [ Option [] ["mlf"] (NoArg $ \ o -> return o{ _enabled = True })
+  [ Option [] ["mlf"] (NoArg enable)
     "Generate Malfunction"
-  , Option ['r'] ["print-var"] (ReqArg (\r o -> return o{_resultVar = Just r}) "VAR")
-    "(DEBUG) Run the module and print the integer value of a variable"
-  , Option ['o'] [] (ReqArg (\r o -> return o{_outputFile = Just r}) "FILE")
-    "(DEBUG) Place outputFile resulting module into FILE"
-  , Option ['d'] ["debug"] (NoArg $ \ o -> return o{ _debug = True })
-    "Generate Malfunction"
-  , Option [] ["compilemlf"] (ReqArg (\r o -> return o{_outputMlf = Just r}) "MODNAME")
+  , Option [] ["dont-call-mlf"] (NoArg dontCallMLF)
     "Runs the malfunction compiler on the output file"
+  , Option [] ["d"] (NoArg debugMLF)
+    "Generate Debugging Information."
   ]
-
-backend' :: Backend' MlfOptions MlfOptions () [Definition] Definition
+ where
+   enable o = pure o{optMLFCompile = True}
+   dontCallMLF o = pure o{optCallMLF = False}
+   debugMLF o = pure o{optDebugMLF = True}
+  
+-- We do not support separate compilation.
+backend' :: Backend' MlfOptions MlfOptions FilePath [Definition] Definition
 backend' = Backend' {
   backendName = "malfunction"
   , options = defOptions
   , commandLineFlags = ttFlags
-  , isEnabled = _enabled
-  , preCompile = return
-  , postCompile = mlfPostCompile --liftIO (putStrLn "post compile")
-  , preModule = \_enf _m _ifile -> return $ Recompile ()
+  , isEnabled = optMLFCompile
+  , preCompile = pure
+  , postCompile = mlfCompile
+  , preModule = \_ _ fp -> pure $ Recompile fp
   , compileDef = \_env _menv def -> return def
-  , postModule = \_env _menv _m _mod defs -> return defs --mlfPostModule env defs
-  , backendVersion = Nothing
+  , postModule = \_ _ _ _ defs -> pure defs 
+  , backendVersion = Just "0.0.1"
   , scopeCheckingSuffices = False
   }
 
+
+-- TODO Needs review.
 definitionSummary :: MlfOptions -> Definition -> TCM ()
-definitionSummary opts def = when (_debug opts) $ do
+definitionSummary opts def = when (optDebugMLF opts) $ do
   liftIO (putStrLn ("Summary for: " ++ show q))
   liftIO $ putStrLn $ unlines [
     show (defName def)
@@ -125,10 +138,10 @@ mlfMod allDefs = do
   let (primsAndAxioms, tlFunBindings) = partitionEithers grps'
       (prims, axioms) = partitionEithers primsAndAxioms
   env <- getCompilerEnv (getConstructors allDefs) tlFunBindings
-  let (MMod funBindings ts) = compile env tlFunBindings
+  let MMod funBindings im ts = compile env tlFunBindings
       primBindings = catMaybes $ Mlf.runTranslate (mapM (uncurry Mlf.compilePrim) prims) env
       axiomBindings = catMaybes $ Mlf.runTranslate (mapM Mlf.compileAxiom axioms) env
-  return $ MMod (axiomBindings ++ primBindings ++ funBindings) ts
+  return $ MMod (axiomBindings ++ primBindings ++ funBindings) im ts
     where
       act :: Definition -> TCM (Maybe (Either (Either (QName, String) QName) (QName, TTerm)))
       act def@Defn{defName = q, theDef = d} = case d of
@@ -187,13 +200,61 @@ arityQName q = f . theDef <$> getConstInfo q
 getBindings :: Definition -> TCM (Maybe (QName, TTerm))
 getBindings Defn{defName = q} = fmap (\t -> (q, t)) <$> toTreeless q
 
-mlfPostCompile :: MlfOptions -> IsMain -> Map ModuleName [Definition] -> TCM ()
-mlfPostCompile opts _ modToDefs = do
+
+
+-- TODO I need to clean this.
+outFile :: [ Name ] -> TCM (FilePath, FilePath)
+outFile m = do
+  mdir <- compileDir
+  let (fdir, fn) = let r = map (show . pretty) m
+                   in (init r , last r)
+  let dir = intercalate "/" (mdir : fdir)
+      fp  = dir ++ "/" ++ (replaceExtension fn "mlf")
+  liftIO $ createDirectoryIfMissing True dir
+  return (mdir, fp)
+
+
+
+mlfCompile :: MlfOptions -> IsMain -> Map ModuleName [Definition] -> TCM ()
+mlfCompile opts modIsMain mods = do
+  agdaMod <- curMName
+  let outputName = case mnameToList agdaMod of
+                    [] -> error "Impossible"
+                    ms -> last ms
+  (mdir , fp) <- outFile (mnameToList agdaMod)
+
+  -- TODO review ?? Report debugging Information 
   mapM_ (definitionSummary opts) allDefs
-  void $ mlfPostModule opts allDefs
+
+  
+  -- Perform the transformation to malfunction
+
+  im <- compileToMLF opts allDefs fp
+  let isMain = mappend modIsMain im -- both need to be IsMain
+
+  
+    -- TODO Warn if no main function and not --no-main
+  case (modIsMain /= isMain) of
+    True -> (error ("No main function defined in " ++ ((show . pretty) agdaMod) ++ " . Use --no-main to suppress this warning."))
+    False -> pure ()
+
+  let op = case isMain of
+             IsMain -> "compile"
+             NotMain -> "cmx"
+  
+  -- Perform the Compilation if requested.
+  
+  let args = [op] ++ [fp] ++ (if isMain == IsMain then ["-o", mdir </> show (nameConcrete outputName)] else [])
+  let doCall = optCallMLF opts
+      compiler = "malfunction"
+  callCompiler doCall compiler args
   where
     allDefs :: [Definition]
-    allDefs = concat (Map.elems modToDefs)
+    allDefs = concat (Map.elems mods)
+
+
+
+--
 
 -- TODO: `Definition`'s should be sorted *and* grouped by `defMutual` (a field
 -- in Definition). each group should compile to:
@@ -202,28 +263,15 @@ mlfPostCompile opts _ modToDefs = do
 --       x0 = def0
 --       ...
 --    )
-mlfPostModule :: MlfOptions -> [Definition] -> TCM Mod
-mlfPostModule opts defs = do
-  modl@(MMod binds _) <- mlfMod defs
-  let modlTxt = prettyShow $ fromMaybe modl
-       ((withPrintInts modl . pure)  <$>  (_resultVar opts >>=  fromSimpleIdent binds))
-  when (_debug opts) $ liftIO . putStrLn $ modlTxt
-  whenJust (_resultVar opts) (printVars opts modl . pure)
-  whenJust (_outputFile opts) (liftIO . (`writeFile`modlTxt))
-  whenJust (_outputMlf opts) $ \fp -> liftIO $ Run.runMalfunction fp modlTxt
-  return modl
+compileToMLF :: MlfOptions -> [Definition] -> FilePath -> TCM IsMain
+compileToMLF opts defs fp = do
+  modl@(MMod binds im _) <- mlfMod defs
+  let modlTxt = prettyShow modl
+  liftIO $ (fp `writeFile` modlTxt)
+  pure im 
 
-printVars :: MonadIO m => MlfOptions -> Mod -> [Ident] -> m ()
-printVars opts modl@(MMod binds _) simpleVars = when (_debug opts) $ do
-  liftIO (putStrLn "\n=======================")
-  case fullNames of
-    Just vars -> liftIO $ runModPrintInts modl vars >>= putStrLn
-    _ ->
-      liftIO $
-      putStrLn
-        "Variable not bound, did you specify the *fully quailified* name, e.g. \"Test.var\"?"
-  where
-    fullNames = mapM (fromSimpleIdent binds) simpleVars
+
+--- Review the rest of the Code.
 
 -- | "Test2.a" --> 24.1932f7ddf4cc7d3a.Test2.a
 fromSimpleIdent :: [Binding] -> Ident -> Maybe Ident

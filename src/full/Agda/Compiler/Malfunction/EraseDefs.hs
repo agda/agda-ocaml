@@ -1,6 +1,7 @@
 module Agda.Compiler.Malfunction.EraseDefs (eraseB) where
 
 import Agda.Compiler.Malfunction.AST
+import Agda.Compiler.Common
 import Data.List
 import qualified Data.Map.Strict as M
 
@@ -50,7 +51,7 @@ findUsedIdents (Mfield _ t) = findUsedIdents t
 findUsedIdents _ = []
 
 
-eraseB :: [Binding] -> [Binding]
+eraseB :: [Binding] -> (IsMain , [Binding])
 eraseB bs = let allIds = findAllIdents bs
                 mmain = findMain allIds
             in case mmain of
@@ -58,7 +59,7 @@ eraseB bs = let allIds = findAllIdents bs
                    let env = M.delete (fst main) (M.fromList allIds)
                        allUM = M.insert (fst main) (snd main) (findAllUsedBindings env (snd main))
                        -- We order them according to the original Order.
-                   in foldr (\x osum -> case x of
+                   in (IsMain , foldr (\x osum -> case x of
                                           Named id t ->  case (M.lookup id allUM) of
                                                            Just _ -> x : osum
                                                            _ -> osum
@@ -66,5 +67,5 @@ eraseB bs = let allIds = findAllIdents bs
                                                                                          Just _ -> True
                                                                                          _ -> False ) ys in case rs of
                                                                                                               [] -> osum
-                                                                                                              _ -> Recursive rs : osum) [] bs
-                 Nothing -> bs
+                                                                                                              _ -> Recursive rs : osum) [] bs )
+                 Nothing -> (NotMain , bs)

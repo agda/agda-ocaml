@@ -60,6 +60,7 @@ import           Numeric (showHex)
 import           Data.Char
 
 import           Agda.Compiler.Malfunction.AST
+import           Agda.Compiler.Common
 import           Agda.Compiler.Malfunction.EraseDefs
 import qualified Agda.Compiler.Malfunction.Primitive as Primitive
 
@@ -553,8 +554,9 @@ compile env bs = runTranslate (compileM bs) env
 
 compileM :: MonadReader Env m => [(QName, TTerm)] -> m Mod
 compileM allDefs = do
-  bs <- mapM translateSCC recGrps
-  return $ MMod (eraseB bs) []
+  bss <- mapM translateSCC recGrps
+  let (im , bs) = eraseB bss
+  return $ MMod bs im []
   where
     translateSCC scc = case scc of
       AcyclicSCC single -> uncurry translateBinding single

@@ -35,6 +35,7 @@ import Data.Int
 -- `pretty` but this is not the one used for Treeless terms, so for consistency,
 -- let's go with Agda's choice.
 import Agda.Utils.Pretty
+import Agda.Compiler.Common
 
 -- | The integer types.
 data IntType
@@ -128,7 +129,7 @@ type Longident = [Ident]
 -- beginning with the atom export."
 --
 -- | Defines a malfunction module.
-data Mod = MMod [Binding] [Term] deriving (Eq, Show)
+data Mod = MMod [Binding] IsMain [Term] deriving (Eq, Show)
 
 -- | The overall syntax of malfunction terms.
 data Term
@@ -197,7 +198,7 @@ prettyList__ :: Pretty a => [ a ] -> Doc
 prettyList__ = fsep . map pretty
 
 instance Pretty Mod where
-  pretty (MMod bs ts) = levelPlus "module" (map pretty bs ++ [levelPlus "export" (map pretty ts)])
+  pretty (MMod bs _ ts) = levelPlus "module" (map pretty bs ++ [levelPlus "export" (map pretty ts)])
   prettyPrec _ = pretty
 
 instance Pretty Term where
