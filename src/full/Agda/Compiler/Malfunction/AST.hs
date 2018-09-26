@@ -43,7 +43,7 @@ data IntType
   | TInt32
   | TInt64
   | TBigint
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 -- | An integer value tagged with its corresponding type.
 data IntConst
@@ -67,21 +67,21 @@ data IntConst
   | CInt32 Int32
   | CInt64 Int64
   | CBigint Integer
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 -- | A unary operator.
 data UnaryIntOp = Neg | Not
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 -- | A binary operator.
 data BinaryIntOp
   = Add | Sub | Mul | Div | Mod | And | Or | Xor | Lsl | Lsr | Asr
   | Lt | Gt | Lte | Gte | Eq
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 -- | Vector types.
 data VectorType = Array | Bytevec
-  deriving (Show, Eq)
+  deriving (Show, Eq , Ord)
 
 -- | Mutability
 data Mutability = Inm | Mut
@@ -111,7 +111,7 @@ data Case
   | CaseInt Int
   -- (n m)
   | Intrange (Int, Int)
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 -- | An identifier used to reference other values in the malfunction module.
 type Ident = String
@@ -153,7 +153,9 @@ data Term
   -- Blocks
   | Mblock Int [Term]
   | Mfield Int Term
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
+
+
 
 -- | Bindings
 --
@@ -176,7 +178,7 @@ data Binding
   = Unnamed Term
   | Named Ident Term
   | Recursive [(Ident, Term)]
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 textShow :: Show a => a -> Doc
 textShow = text . show

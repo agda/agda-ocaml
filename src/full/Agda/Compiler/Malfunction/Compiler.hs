@@ -530,7 +530,7 @@ nameToIdent :: MonadReader Env m => QName -> m Ident
 nameToIdent qn = nameIdToIdent (qnameNameId qn)
 
 nameIdToIdent' :: NameId -> Maybe String -> Ident
-nameIdToIdent' (NameId a b) msuffix = (hex a ++ "." ++ hex b ++ suffix)
+nameIdToIdent' (NameId a b) msuffix = ("agdaIdent" ++ hex a ++ "." ++ hex b ++ suffix)
   where
     suffix = maybe "" ('.':) msuffix
     hex = (`showHex` "") . toInteger
