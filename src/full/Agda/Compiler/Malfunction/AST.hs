@@ -8,6 +8,7 @@ This module defines the abstract syntax of
 language specification>
 -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.AST
   ( IntType(..)
   , IntConst(..)
@@ -30,6 +31,7 @@ module Agda.Compiler.Malfunction.AST
   , prettyShow
   ) where
 
+import Prelude hiding ((<>))
 import Data.Int
 -- There does exist a definition of a type-class `Pretty` in the package
 -- `pretty` but this is not the one used for Treeless terms, so for consistency,
@@ -277,7 +279,7 @@ instance Pretty BinaryIntOp where
     Xor -> "^.ibig"
     Lsl -> "<<.ibig"
     Lsr -> ">>.ibig"
-    Asr  -> "a>>.ibig"
+    Asr -> "a>>.ibig"
     Lt  -> "<.ibig"
     Gt  -> ">.ibig"
     Lte -> "<=.ibig"

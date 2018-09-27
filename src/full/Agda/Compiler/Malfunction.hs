@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction (backend) where
 
 import           Agda.Compiler.Backend
@@ -11,11 +12,7 @@ import           Agda.Utils.Impossible
 import           Control.Monad
 import           Control.Monad.Extra
 import           Control.Monad.Trans
-import           Data.Bifunctor
-import           Data.Char
 import           Data.Either
-import           Data.Generics.Uniplate
-import           Data.Ix                             (rangeSize)
 import           Data.Ix
 import           Data.List
 import           Data.Map                            (Map)
@@ -23,7 +20,6 @@ import qualified Data.Map                            as Map
 import           Data.Maybe
 import           Data.Set                            (Set)
 import qualified Data.Set                            as Set
-import           Numeric                             (showHex)
 import           System.Console.GetOpt
 import           Text.Printf
 import           System.FilePath.Posix
@@ -32,10 +28,8 @@ import           System.Directory
 
 import           Agda.Compiler.Malfunction.AST
 import qualified Agda.Compiler.Malfunction.Compiler  as Mlf
-import           Agda.Compiler.Malfunction.Instances
 import           Agda.Compiler.Malfunction.Run
 import qualified Agda.Compiler.Malfunction.Run       as Run
-import           Agda.Syntax.Common                  (NameId)
 
 
 _IMPOSSIBLE :: a
@@ -113,13 +107,14 @@ definitionSummary opts def = when (optDebugMLF opts) $ do
                    in text $ printf "%s %s %s" cs h cs
       q = defName def
       defntype = case theDef def of
-        Constructor{}  -> "constructor"
-        Primitive{}    -> "primitive"
-        Function{}     -> "function"
-        Datatype{}     -> "datatype"
-        Record{}       -> "record"
-        AbstractDefn{} -> "abstract"
-        Axiom{}        -> "axiom"
+        Constructor{}      -> "constructor"
+        Primitive{}        -> "primitive"
+        Function{}         -> "function"
+        Datatype{}         -> "datatype"
+        Record{}           -> "record"
+        AbstractDefn{}     -> "abstract"
+        Axiom{}            -> "axiom"
+        GeneralizableVar{} -> error "Malfunction.definitionSummar: TODO"
 
 -- TODO: Maybe we'd like to refactor this so that we first do something like
 -- this (in the calling function)
@@ -154,7 +149,7 @@ compile :: Mlf.Env -> [(QName, TTerm)] -> Mod
 compile env bs = Mlf.compile env bs
 
 qnamesInTerm :: Set QName -> TTerm -> Set QName
-qnamesInTerm s t = go t s
+qnamesInTerm s0 t0 = go t0 s0
   where
     go :: TTerm -> Set QName -> Set QName
     go t qs = case t of
@@ -166,10 +161,10 @@ qnamesInTerm s t = go t s
       TCase _ _ p alts -> foldr qnamesInAlt (go p qs) alts
       _                -> qs
       where
-        qnamesInAlt a qs = case a of
-          TACon q _ t -> Set.insert q (go t qs)
-          TAGuard t b -> foldr go qs [t, b]
-          TALit _ b   -> go b qs
+        qnamesInAlt a qs' = case a of
+          TACon q _ t' -> Set.insert q (go t' qs')
+          TAGuard t' b -> foldr go qs' [t', b]
+          TALit _ b    -> go b qs'
 
 
 -- | The argument allNames is optional. If you provide an empty list concrete

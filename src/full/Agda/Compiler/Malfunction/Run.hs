@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.Run
   ( compileRunPrint
   , compileModFile

@@ -1,5 +1,7 @@
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.EraseDefs (eraseB , findUsedIdents) where
 
+import Prelude hiding (id)
 import Agda.Compiler.Malfunction.AST
 import Agda.Compiler.Common
 import Data.List
@@ -16,7 +18,7 @@ toTerm (Named _ t) = t
 toTerm _ = undefined
 
 findMain :: [(Ident , Term)] -> Maybe (Ident , Term)
-findMain ms = let fms = filter (\(x , t) -> "main" `isSuffixOf` x) ms
+findMain ms = let fms = filter (\(x , _t) -> "main" `isSuffixOf` x) ms
               in case fms of
                   [] -> Nothing
                   [x] -> Just x
@@ -29,7 +31,7 @@ findAllUsedBindings env t = let nid = foldr (++) [] (map (\x -> case (M.lookup x
                                                                   _ -> []) (findUsedIdents t))
                                 newItems = M.fromList nid
                                 nEnv = M.difference env newItems
-                            in  snd $ foldr (\(id , t) (env , items) -> let ni = findAllUsedBindings env t in (M.difference env ni , M.union ni items)) (nEnv , newItems) nid
+                            in  snd $ foldr (\(_ , t) (env , items) -> let ni = findAllUsedBindings env t in (M.difference env ni , M.union ni items)) (nEnv , newItems) nid
                                 
 
 -- The list is greater than the global lists because we have local identifiers.
@@ -51,21 +53,35 @@ findUsedIdents (Mfield _ t) = findUsedIdents t
 findUsedIdents _ = []
 
 
-eraseB :: [Binding] -> (IsMain , [Binding])
-eraseB bs = let allIds = findAllIdents bs
-                mmain = findMain allIds
-            in case mmain of
-                 Just main ->
-                   let env = M.delete (fst main) (M.fromList allIds)
-                       allUM = M.insert (fst main) (snd main) (findAllUsedBindings env (snd main))
-                       -- We order them according to the original Order.
-                   in (IsMain , foldr (\x osum -> case x of
-                                          Named id t ->  case (M.lookup id allUM) of
-                                                           Just _ -> x : osum
-                                                           _ -> osum
-                                          Recursive ys -> let rs = filter (\(id , _) -> case (M.lookup id allUM) of
-                                                                                         Just _ -> True
-                                                                                         _ -> False ) ys in case rs of
-                                                                                                              [] -> osum
-                                                                                                              _ -> Recursive rs : osum) [] bs )
-                 Nothing -> (NotMain , bs)
+
+eraseB :: [Binding] -> [Binding]
+eraseB bs = case findMain allIds of
+  Just main -> f main
+  Nothing -> bs
+  where
+  allIds = findAllIdents bs
+
+  f :: (Ident, Term) -> [Binding]
+  f main =
+    foldr g [] bs
+    where
+    env = M.delete (fst main) (M.fromList allIds)
+    allUM = M.insert (fst main) (snd main) (findAllUsedBindings env (snd main))
+
+    g :: Binding -> [Binding] -> [Binding]
+    g x osum = case x of
+      Named id _t ->
+        case (M.lookup id allUM) of
+          Just _ -> x : osum
+          _ -> osum
+      Recursive ys ->
+        case filter p ys of
+          [] -> osum
+          rs -> Recursive rs : osum
+        where
+          p (id , _) = case M.lookup id allUM of
+            Just _ -> True
+            _      -> False
+      Unnamed{} -> error
+          $  "Agda.Compiler.Malfunction.EraseDefs.f.g: "
+          ++ "Non-exhaustive pattern match!"

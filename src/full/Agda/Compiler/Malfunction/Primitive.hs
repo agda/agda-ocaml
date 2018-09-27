@@ -1,16 +1,16 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLists #-}
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.Primitive
   ( axioms
   , primitives
   ) where
 
 import Data.Map (Map)
-import qualified Data.Map as Map
 
 import Agda.Compiler.Malfunction.AST
 
 axioms :: Map String Term
-axioms = Map.fromList
+axioms =
   [ notMapped "Char.Char"
   , notMapped "IO.IO"
   , notMapped "String.String"
@@ -41,7 +41,7 @@ axioms = Map.fromList
     notMapped n = (n, Mlambda [] $ errorT $ "Axiom not yet mapped: " ++ n)
 
 primitives :: Map String Term
-primitives = Map.fromList
+primitives =
   -- Integer functions
   [ "primIntegerPlus"     |-> binOp Add
   , "primIntegerMinus"    |-> binOp Sub
@@ -146,7 +146,7 @@ zeroT = Mint (CInt 0)
 sucT :: Term
 sucT = Mlambda ["a"] (Mintop2 Add TInt (Mvar "a") (Mint (CInt 1)))
 
--- FIXME: Copied from `Compiler` due to an otherwise cyclic dependency
+-- FIXME: Copied from `Compiler` due to an otherwise cyclic dependency.
 errorT :: String -> Term
 errorT err = Mapply (Mglobal ["Pervasives", "failwith"]) [Mstring err]
 
