@@ -8,6 +8,7 @@ This module defines the abstract syntax of
 language specification>
 -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.AST
   ( IntType(..)
   , IntConst(..)
@@ -275,7 +276,7 @@ instance Pretty BinaryIntOp where
     Xor -> "^.ibig"
     Lsl -> "<<.ibig"
     Lsr -> ">>.ibig"
-    Asr  -> "a>>.ibig"
+    Asr -> "a>>.ibig"
     Lt  -> "<.ibig"
     Gt  -> ">.ibig"
     Lte -> "<=.ibig"
