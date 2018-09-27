@@ -175,7 +175,7 @@ data Term
 --                  Bindings scope over themselves, each other, subsequent
 --                  bindings, and the body.
 data Binding
-  = Unnamed Term
+  = Unnamed Term -- Where is unnamed used?
   | Named Ident Term
   | Recursive [(Ident, Term)]
   deriving (Show, Eq, Ord)

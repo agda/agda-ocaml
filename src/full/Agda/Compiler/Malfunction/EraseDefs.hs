@@ -1,4 +1,4 @@
-module Agda.Compiler.Malfunction.EraseDefs (eraseB) where
+module Agda.Compiler.Malfunction.EraseDefs (eraseB , findUsedIdents) where
 
 import Agda.Compiler.Malfunction.AST
 import Agda.Compiler.Common
