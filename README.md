@@ -24,29 +24,24 @@ This project has been tested using `stack`. Building should be as easy as:
     ln -s stack-8.0.2.yaml stack.yaml
     stack build
 
-Running:
-
-    stack exec agda-ocaml
-
-Installing:
+### Installing
 
     stack install agda-ocaml
 
-Testing:
+### Testing
 
     stack test
 
-Benchmarking:
+### Benchmarking
 
-[CPU Benchmark](bench_images/CPU.png)
-[Memory Benchmark](bench_images/memory.png)
+    stack bench
 
+![CPU Benchmark](bench_images/CPU.png)
+![Memory Benchmark](bench_images/memory.png)
 
-    stack exec agda-ocaml-bench
-
-The benchmarks depend on [agda-prelude] - so download that and add it to
-your default libraries.
-You also need to install the "time" and "gnuplot" package in the Debian OS.
+The benchmarks depend on [agda-prelude] - so download that and add it
+to your default libraries.  You also need to install the `time` and
+`gnuplot` package in the Debian OS.
 
 
 [malfunction]: https://github.com/stedolan/malfunction

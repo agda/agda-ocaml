@@ -30,6 +30,7 @@ module Agda.Compiler.Malfunction.AST
   , prettyShow
   ) where
 
+import Prelude hiding ((<>))
 import Data.Int
 -- There does exist a definition of a type-class `Pretty` in the package
 -- `pretty` but this is not the one used for Treeless terms, so for consistency,
