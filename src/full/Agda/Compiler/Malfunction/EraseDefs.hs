@@ -30,7 +30,7 @@ findAllUsedBindings env t = let nid = foldr (++) [] (map (\x -> case (M.lookup x
                                                                   _ -> []) (findUsedIdents t))
                                 newItems = M.fromList nid
                                 nEnv = M.difference env newItems
-                            in  snd $ foldr (\(_id , _t) (_env , items) -> let ni = findAllUsedBindings env t in (M.difference env ni , M.union ni items)) (nEnv , newItems) nid
+                            in  snd $ foldr (\(_ , t) (env , items) -> let ni = findAllUsedBindings env t in (M.difference env ni , M.union ni items)) (nEnv , newItems) nid
                                 
 
 -- The list is greater than the global lists because we have local identifiers.
@@ -82,4 +82,4 @@ eraseB bs = case findMain allIds of
             _      -> False
       Unnamed{} -> error
           $  "Agda.Compiler.Malfunction.EraseDefs.f.g: "
-          <> "Non-exhaustive pattern match!"
+          ++ "Non-exhaustive pattern match!"
