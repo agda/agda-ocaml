@@ -54,10 +54,10 @@ findUsedIdents _ = []
 
 
 
-eraseB :: [Binding] -> [Binding]
+eraseB :: [Binding] -> (IsMain , [Binding])
 eraseB bs = case findMain allIds of
-  Just main -> f main
-  Nothing -> bs
+  Just main -> (IsMain , f main)
+  Nothing -> (NotMain , bs)
   where
   allIds = findAllIdents bs
 

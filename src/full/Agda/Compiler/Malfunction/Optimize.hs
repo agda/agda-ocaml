@@ -9,204 +9,52 @@ import qualified Data.Map.Strict as M
 
 import Control.Monad.State
 
---- TODO First We need to remove all let statements.
 
--- First Bool is for general Let
--- Second for recursive let
+--- We remove let statements . According to a treeless comment https://github.com/agda/agda/blob/master/src/full/Agda/Syntax/Treeless.hs#L44 , this is perfectly reasonable.
 
-doLetExist :: Term -> (Bool , Bool)
-doLetExist self@(Mvar i) = (False , False)
-doLetExist self@(Mlambda a t) = doLetExist t
-doLetExist self@(Mapply a bs) = fst $
-  until (\(x , bs) -> snd x) (\(x , (b : bs)) -> let r = doLetExist b
-                                                 in ((fst x && fst r , snd x && snd r) , bs)) ((False , False) , bs)
--- We are going to remove lets, so we do not care about idents inside them.
-doLetExist self@(Mlet bs t) = let x = foldr (\b x -> case b of
-                                                       Recursive _ -> True || x
-                                                       _   -> x ) False bs
-                              in (True , x)
-doLetExist self@(Mswitch ta tb) = fst $
-  until (\(x , bs) -> snd x) (\(x , (b : bs)) -> let r = doLetExist b
-                                                 in ((fst x && fst r , snd x && snd r) , bs)) ((False , False) , (ta : (map snd tb)))  
-doLetExist self@(Mintop1 x y t) = doLetExist t
-doLetExist self@(Mintop2 x y ta tb ) = let nta = doLetExist ta
-                                           ntb = doLetExist tb
-                                       in (fst nta && fst ntb , snd nta && snd ntb)
-doLetExist self@(Mconvert x y t) = doLetExist t
-doLetExist self@(Mvecnew x ta tb) = let nta = doLetExist ta
-                                        ntb = doLetExist tb
-                                    in (fst nta && fst ntb , snd nta && snd ntb)
-doLetExist self@(Mvecget x ta tb) = let nta = doLetExist ta
-                                        ntb = doLetExist tb
-                                    in (fst nta && fst ntb , snd nta && snd ntb)
-doLetExist self@(Mvecset x ta tb tc) = let nta = doLetExist ta
-                                           ntb = doLetExist tb
-                                           ntc = doLetExist tc
-                                       in (fst nta && fst ntb && fst ntc , snd nta && snd ntb && fst ntc)
-doLetExist self@(Mveclen x t) = doLetExist t
-doLetExist self@(Mblock x bs) = fst $
-  until (\(x , bs) -> snd x) (\(x , (b : bs)) -> let r = doLetExist b
-                                                 in ((fst x && fst r , snd x && snd r) , bs)) ((False , False) , bs)
-doLetExist self@(Mfield x t) = doLetExist t
-doLetExist x = (False , False)
-
-
-
-
--- We find all local Idents (in lambdas) that are not let bindings. We do that because when we remove the let binding,
--- we need to make it a function that will pass those idents if they exist in the let term.
-
-findLocalIdents :: Term -> [Ident]
-findLocalIdents self@(Mvar i) = []
-findLocalIdents self@(Mlambda a t) = a ++ (findLocalIdents t)
-findLocalIdents self@(Mapply a bs) = concat $ map (findLocalIdents) (a : bs)
--- We are going to remove lets, so we do not care about idents inside them.
-findLocalIdents self@(Mlet bs t) = []
-findLocalIdents self@(Mswitch ta tb) = concat $ map (findLocalIdents) (ta : (map snd tb))   
-findLocalIdents self@(Mintop1 x y t) = findLocalIdents t
-findLocalIdents self@(Mintop2 x y ta tb ) = let nta = findLocalIdents ta
-                                                ntb = findLocalIdents tb
-                                            in nta ++ ntb
-findLocalIdents self@(Mconvert x y t) = findLocalIdents t
-findLocalIdents self@(Mvecnew x ta tb) = let nta = findLocalIdents ta
-                                             ntb = findLocalIdents tb
-                                         in nta ++ ntb
-findLocalIdents self@(Mvecget x ta tb) = let nta = findLocalIdents ta
-                                             ntb = findLocalIdents tb
-                                         in nta ++ ntb
-findLocalIdents self@(Mvecset x ta tb tc) = let nta = findLocalIdents ta
-                                                ntb = findLocalIdents tb
-                                                ntc = findLocalIdents tc
-                                            in nta ++ ntb ++ ntc
-findLocalIdents self@(Mveclen x t) = findLocalIdents t
-findLocalIdents self@(Mblock x bs) = concat $ map findLocalIdents bs
-findLocalIdents self@(Mfield x t) = findLocalIdents t
-findLocalIdents x = []
-
-type TPUIDState =  State Integer
-
--- newTPUID :: TPUIDState String
--- newTPUID = do
---   s <- gets (show . fst)
---   modify (\(a , b) -> (1 + a , b))
---   pure $ "topId" ++ s
-
-
-newLUID :: TPUIDState String
-newLUID = do
-  s <- gets show
-  modify (\a -> 1 + a)
-  pure $ "lamb" ++ s
-
-
-replaceIdent :: Ident -> Ident -> Term -> Term
-replaceIdent id nid self@(Mvar i) = case i == id of
-                                      True -> Mvar nid
-                                      False -> self
-replaceIdent id nid self@(Mlambda a t) = Mlambda a (replaceIdent id nid t)
-replaceIdent id nid self@(Mapply a bs) = let (na : nbs) = map (replaceIdent id nid) (a : bs)
-                                         in (Mapply na nbs)
---- TODO  Fix that.
-replaceIdent id nid self@(Mlet bs t) = let nt = replaceIdent id nid t
-                                       in Mlet (map (rpl id nid) bs) nt where
-  rpl :: Ident -> Ident -> Binding -> Binding
-  rpl  id nid (Unnamed t) = Unnamed $ replaceIdent id nid t
-  rpl  id nid (Named x t) = Named x $ replaceIdent id nid t
-  rpl  id nid (Recursive rs) = Recursive (zipWith (\x y -> (fst x , y)) rs (map (replaceIdent id nid . snd) rs))
-replaceIdent id nid self@(Mswitch ta tb) = let nta = replaceIdent id nid ta
-                                               ntb = map (replaceIdent id nid) (map snd tb)
-                                           in Mswitch nta (zipWith (\(c , _) nb -> (c , nb)) tb ntb)
-replaceIdent id nid self@(Mintop1 x y t) = let nt = replaceIdent id nid t
-                                           in (Mintop1 x y nt)
-replaceIdent id nid self@(Mintop2 x y ta tb ) = let nta = replaceIdent id nid ta
-                                                    ntb = replaceIdent id nid tb
-                                                in (Mintop2 x y nta ntb )
-replaceIdent id nid self@(Mconvert x y t) = let nt = replaceIdent id nid t
-                                            in (Mconvert x y nt)
-replaceIdent id nid self@(Mvecnew x ta tb) = let nta = replaceIdent id nid ta
-                                                 ntb = replaceIdent id nid tb
-                                             in (Mvecnew x nta ntb)
-replaceIdent id nid self@(Mvecget x ta tb) = let nta = replaceIdent id nid ta
-                                                 ntb = replaceIdent id nid tb
-                                             in (Mvecget x nta ntb)
-replaceIdent id nid self@(Mvecset x ta tb tc) = let nta = replaceIdent id nid ta
-                                                    ntb = replaceIdent id nid tb
-                                                    ntc = replaceIdent id nid tc
-                                                in (Mvecset x nta ntb ntc)
-replaceIdent id nid self@(Mveclen x t) = let nt = replaceIdent id nid t
-                                         in (Mveclen x nt)
-replaceIdent id nid self@(Mblock x bs) = let nbs = map (replaceIdent id nid) bs
-                                         in (Mblock x nbs)
-replaceIdent id nid self@(Mfield x t) = let nt = replaceIdent id nid t
-                                        in (Mfield x t)
-replaceIdent id nid x = x
-
--- First term is the lambda , second one is the Mapply.
-createTL:: [Ident] -> Ident -> Term -> TPUIDState (Term , Term)
-createTL lids id tm = do
-                         let r = findUsedIdents tm -- the idents inside Let.
-                             ol = intersect r lids -- those that are local to the function.
-                         (nidt , ntm) <- foldM (\(l , t) id -> do nid <- newLUID
-                                                                  pure (nid : l , replaceIdent id nid t)) ([] , tm) ol
-                         pure (Mlambda nidt ntm , Mapply (Mvar id) (map Mvar ol))
-                      
-
---- We remove let statements and return recursive let statements turned into top-level bindings.
---- We know if Recursive let exists, so we only provide local idents if it does.
--- Assuming that idents are unique, we reuse the ident for the Recursive bindings.
-
-removeLets' :: [Ident] -> Term -> ([Binding] , Term)
-removeLets' lids self@(Mvar i) = ([] , self)
-removeLets' lids self@(Mlambda a t) = let rm = removeLets' lids t
-                                      in (fst rm , Mlambda a (snd rm))
-removeLets' lids self@(Mapply a bs) = let (na : nbs) = map (removeLets' lids) (a : bs)
-                                      in (fst na ++ (concat $ map fst nbs) , (Mapply (snd na) (map snd nbs))) 
-removeLets' lids self@(Mlet bs t) =  let mt = foldr (\x y -> let g = rpl x (snd y)
-                                                             in (fst y ++ fst g , snd g)) ([] , t) bs
-                                         nt = removeLets' lids (snd mt)
-                                     in (fst mt ++ fst nt , snd nt) where
-  rpl :: Binding -> Term -> ([Binding] , Term)
-  rpl (Unnamed t) tm = ([] , tm)
-  rpl (Named x t) tm = ([] , replaceTr (Mvar x) t tm)
-  rpl (Recursive rs) tm = let ds = map (\(id , t) -> fst $ runState (createTL lids id t) 0) rs
-                          in ( [Recursive (zip (map fst rs) (map fst ds))]
-                             , foldr (\(pid , ntm) y -> replaceTr (Mvar pid) ntm y) tm (zip (map fst rs)$ map snd ds))
-removeLets' lids self@(Mswitch ta tb) = let nta = removeLets' lids ta
-                                            ntb = map (removeLets' lids) (map snd tb)
-                                        in (fst nta ++ (concat $ map fst ntb)
-                                           , Mswitch (snd nta) (zipWith (\(c , _) nb -> (c , snd nb)) tb ntb))
-removeLets' lids self@(Mintop1 x y t) = let nt = removeLets' lids t
-                                        in (fst nt  , Mintop1 x y (snd nt))
-removeLets' lids self@(Mintop2 x y ta tb ) = let nta = removeLets' lids ta
-                                                 ntb = removeLets' lids tb
-                                             in (fst nta ++ fst ntb , Mintop2 x y (snd  nta) (snd ntb))
-removeLets' lids self@(Mconvert x y t) = let nt = removeLets' lids t
-                                         in (fst nt , Mconvert x y (snd nt))
-removeLets' lids self@(Mvecnew x ta tb) = let nta = removeLets' lids ta
-                                              ntb = removeLets' lids tb
-                                          in (fst nta ++ fst ntb , Mvecnew x (snd nta) (snd ntb))
-removeLets' lids self@(Mvecget x ta tb) = let nta = removeLets' lids ta
-                                              ntb = removeLets' lids tb
-                                          in (fst nta ++ fst ntb , Mvecget x (snd nta) (snd ntb))
-removeLets' lids self@(Mvecset x ta tb tc) = let nta = removeLets' lids ta
-                                                 ntb = removeLets' lids tb
-                                                 ntc = removeLets' lids tc
-                                             in (fst nta ++ fst ntb ++ fst ntc , Mvecset x (snd nta) (snd ntb) (snd ntc))
-removeLets' lids self@(Mveclen x t) = let nt = removeLets' lids t
-                                      in (fst nt , Mveclen x (snd nt))
-removeLets' lids self@(Mblock x bs) = let nbs = map (removeLets' lids) bs
-                                      in (concat (map fst nbs) , Mblock x (map snd nbs))
-removeLets' lids self@(Mfield x t) = let nt = removeLets' lids t
-                                     in (fst nt , Mfield x (snd nt))
-removeLets' lids x = ([] , x)
+removeLets :: Term -> Term
+removeLets self@(Mvar i) = self
+removeLets self@(Mlambda a t) = let rm = removeLets t
+                                in Mlambda a rm
+removeLets self@(Mapply a bs) = let (na : nbs) = map removeLets (a : bs)
+                                in Mapply na nbs 
+removeLets self@(Mlet bs t) =  let mt = foldr (\x y -> let g = rpl x y
+                                                       in g            ) t bs
+                                   nt = removeLets mt
+                               in nt where
+  rpl :: Binding -> Term -> Term
+  rpl (Unnamed t) tm = error "Let bindings should have a name."
+  rpl (Named x t) tm = replaceTr (Mvar x) t tm
+  rpl (Recursive rs) tm = error "Let bindings cannot be recursive."
+  
+removeLets self@(Mswitch ta tb) = let nta = removeLets ta
+                                      ntb = map removeLets (map snd tb)
+                                  in Mswitch nta (zipWith (\(c , _) nb -> (c , nb)) tb ntb)
+removeLets self@(Mintop1 x y t) = let nt = removeLets t
+                                  in Mintop1 x y nt
+removeLets self@(Mintop2 x y ta tb ) = let nta = removeLets ta
+                                           ntb = removeLets tb
+                                       in Mintop2 x y nta ntb
+removeLets self@(Mconvert x y t) = let nt = removeLets t
+                                   in Mconvert x y nt
+removeLets self@(Mvecnew x ta tb) = let nta = removeLets ta
+                                        ntb = removeLets tb
+                                    in Mvecnew x nta ntb
+removeLets self@(Mvecget x ta tb) = let nta = removeLets ta
+                                        ntb = removeLets tb
+                                    in Mvecget x nta ntb
+removeLets self@(Mvecset x ta tb tc) = let nta = removeLets ta
+                                           ntb = removeLets tb
+                                           ntc = removeLets tc
+                                       in Mvecset x nta ntb ntc
+removeLets self@(Mveclen x t) = let nt = removeLets t
+                                in Mveclen x nt
+removeLets self@(Mblock x bs) = let nbs = map removeLets bs
+                                in Mblock x nbs
+removeLets self@(Mfield x t) = let nt = removeLets t
+                               in Mfield x nt
+removeLets x =  x
  
-
--- [Binding] is not necessary at all since the treeless syntax does not have recursive let statements.
-removeLet :: Term -> ([Binding] , Term)
-removeLet tm = case (doLetExist tm) of
-                (False , _) -> ([] , tm)
-                (True , False) -> removeLets' [] tm
-                (True , True) -> removeLets' (findLocalIdents tm) tm
 
 
 
@@ -216,6 +64,7 @@ removeLet tm = case (doLetExist tm) of
 
 type UIDState = State (Integer , Integer)
 
+-- We use this for the new Let vars.
 newUID :: UIDState String
 newUID = do
   s <- gets (show . fst)
@@ -223,11 +72,13 @@ newUID = do
   pure $ "letId" ++ s
 
 -- newOID must be called after the recursive part, so that first MApplys will get a lower number.
+-- We use this to order possible lets. (ie MApplys).
 newOID :: UIDState Integer
 newOID = do
   s <- gets snd
   modify (\(a , b) -> (a , (1 + b)))
   pure s
+
 
 -- TODO The algorithm can be better.
 -- IMPORTANT ALGORITHM
@@ -240,7 +91,14 @@ newOID = do
 
 -- The key Term on the map is unchanged. The snd Term on the Map is changing and it is to be used at the let statement.
 -- The term on the product is the changed one which we will use to assemble the result.
--- The integer represents the order of arrival. We will use this to order the let statements.
+
+lintersect :: [M.Map Term (Term , Integer , Bool)] -> M.Map Term (Term , Integer , Bool)
+lintersect (m : ms@(m2 : ms2)) = M.union (foldr (\a b -> M.intersection a b) m ms) (lintersect ms)
+lintersect (m : []) = M.empty
+lintersect [] = M.empty
+
+
+
 findCF :: Term -> UIDState (M.Map Term (Term , Integer , Bool) , Term)
 findCF self@(Mvar i) = pure (M.empty , self)
 findCF self@(Mlambda ids t) = do
@@ -249,31 +107,41 @@ findCF self@(Mlambda ids t) = do
 -- We need to perform findCF on a and bs when we create the let statement.
 findCF self@(Mapply a bs) = do
                               rs <- mapM findCF (a : bs)
-                              
-                              let inters = foldr (\a b -> M.intersection (fst a) b)  M.empty rs
+                              let inters = lintersect (map fst rs)
                                   newInters = M.map (\(a , b , c) -> (a , b , True)) inters
                                   all = foldr (\a b -> M.union (fst a) b)  M.empty rs
+                                  -- newInters replaces inters here.
                                   nall = newInters `M.union` all
                                   (na , nbs) = (snd $ head rs , map snd (tail rs))
                                   nself = Mapply na nbs
                               noid <- newOID
                               pure (M.insert self (nself , noid , False) nall , nself )
-                                        -- case (elemIndex (False , self)  of
 findCF self@(Mlet bs t) = error "We have removed all let statements"
 
 -- We have to put all new let statements after the switch.
-findCF self@(Mswitch ta tb) = pure (M.empty , self) where
+findCF self@(Mswitch ta tb) =  do
+  (tmsa , nta) <- findCF ta
+  rb <- mapM (findCF . snd) tb
+  let inters = lintersect (tmsa : (map fst rb))
+      newInters = M.map (\(a , b , c) -> (a , b , True)) inters
+      all = foldr (\a b -> M.union (fst a) b)  M.empty rb
+      -- newInters replaces inters here.
+      nall = newInters `M.union` all
+      ntb = zip (map fst tb) (map snd rb)
+  pure (nall , Mswitch nta ntb)
+  where
  
-  singleCase :: Term -> UIDState Term
+  singleCase :: Term -> UIDState (M.Map Term (Term , Integer , Bool) , Term)
   singleCase t = do
                     r <- findCF t
-                    
                     let psLets = M.filter (\(a , b , c) -> c) (fst r)
-                        lo = map snd $ sort $ M.foldr (\(a , b , c) l -> (b , a) : l) [] psLets
-                        all = lo ++ [snd r]
+                        lo = sort $ M.foldrWithKey (\k (a , b , c) l -> (b , a , k) : l) [] psLets
+                        all = lo ++ [(0 , snd r , snd r)] -- last and first term should never be used for r.
                     rs <- replaceRec all
-                    let bs = createBinds (init rs)
-                    pure $ Mlet bs (snd (last rs))
+                    let bs = createBinds (zip (map fst rs) (map (\(_ , (_ , t , _)) -> t) rs))
+                    -- Return them with false so as to be possibly matched with higher statements.
+                    let nr = M.union (M.fromList $ map (\(_ , (i , t , k)) -> (k , (t , i , False))) rs) (fst r)
+                    pure $ (nr , Mlet bs ((\(_ , (_ , t , _)) -> t) (last rs)))
 
 findCF  self@(Mintop1 x y t) = do (tms , nself) <- findCF  t
                                   pure (tms , (Mintop1 x y nself))
@@ -313,7 +181,7 @@ findCF  self@(Mveclen x t) =  do (tms , nself) <- findCF  t
 findCF  self@(Mblock x bs) =  do
                                  rs <- mapM findCF bs
                               
-                                 let inters = foldr (\a b -> M.intersection (fst a) b)  M.empty rs
+                                 let inters = lintersect (map fst rs)
                                      newInters = M.map (\(a , b , c) -> (a , b , True)) inters
                                      all = foldr (\a b -> M.union (fst a) b)  M.empty rs
                                      nall = newInters `M.union` all
@@ -324,18 +192,41 @@ findCF  x = pure (M.empty , x)
 
 
 
+introduceLets' :: Term -> Term
+introduceLets' t = fst $
+  runState (do 
+               r <- findCF t
+               -- All the remaining matches are introduced at the top.
+               let psLets = M.filter (\(a , b , c) -> c) (fst r)
+                   lo = sort $ M.foldrWithKey (\k (a , b , c) l -> (b , a , k) : l) [] psLets
+                   all = lo ++ [(0 , snd r , snd r)] -- last and first term should never be used for r.
+               rs <- replaceRec all
+               let bs = createBinds (zip (map fst rs) (map (\(_ , (_ , t , _)) -> t) rs))
+               pure $ Mlet bs ((\(_ , (_ , t , _)) -> t) (last rs))
+           ) (0 , 0)
 
 
-createBinds :: [(String ,Term)] -> [Binding]
+
+-- Used in Functions.
+introduceLets :: Term -> Term
+introduceLets (Mlambda ids t) = Mlambda ids (introduceLets' t)
+introduceLets _ = error "This is a supposed to be a function."
+
+
+
+
+createBinds :: [(String , Term)] -> [Binding]
 createBinds [] = []
 createBinds ((var , term) : ns) = Named var term : createBinds ns
 
-replaceRec :: [Term] -> UIDState [(String ,Term)]
-replaceRec (t : []) = pure $ ("ERROR" , t) : []
-replaceRec (t : ts) =  do ar <- newUID
-                          let rs = map (replaceTr t (Mvar ar)) ts
-                          nvs <- replaceRec rs
-                          pure $ (ar , t) : nvs
+-- Second Term is the initial one and we need it to use it as a key, so we pass it at the result.
+replaceRec :: [(Integer , Term , Term)] -> UIDState [(String , (Integer , Term , Term))]
+replaceRec ((i , t , k) : []) = pure $ ("ERROR" , (i , t , k)) : []
+replaceRec ((i , t , k) : ts) =  do ar <- newUID
+                                    let rs = map (replaceTr t (Mvar ar)) (map (\(i , t , k) -> t)  ts)
+                                    nvs <- replaceRec
+                                             (zip3 (map (\(i , _ , _) -> i) ts) rs (map (\(_ , _ , k) -> k) ts))
+                                    pure $ (ar , (i , t , k)) : nvs
 
 
 
