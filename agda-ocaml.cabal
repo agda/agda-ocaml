@@ -18,6 +18,7 @@ library
                      , Agda.Compiler.Malfunction.Run
                      , Agda.Compiler.Malfunction.Compiler
                      , Agda.Compiler.Malfunction.EraseDefs
+                     , Agda.Compiler.Malfunction.Optimize
                      , Agda.Compiler.Malfunction.Main
                      , Agda.Compiler.Malfunction
                      , Agda.Compiler.Malfunction.Primitive

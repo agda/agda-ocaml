@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-module Agda.Compiler.Malfunction.EraseDefs (eraseB , findUsedIdents) where
+module Agda.Compiler.Malfunction.EraseDefs (eraseB , findUsedIdents , toTerm) where
 
 import Prelude hiding (id)
 import Agda.Compiler.Malfunction.AST
@@ -15,7 +15,7 @@ findAllIdents [] = []
 
 toTerm :: Binding -> Term
 toTerm (Named _ t) = t
-toTerm _ = undefined
+toTerm _ = error "ToTerm used on binding that is not Named."
 
 findMain :: [(Ident , Term)] -> Maybe (Ident , Term)
 findMain ms = let fms = filter (\(x , _t) -> "main" `isSuffixOf` x) ms
