@@ -116,6 +116,10 @@ definitionSummary opts def = when (optDebugMLF opts) $ do
         Axiom{}            -> "axiom"
         GeneralizableVar{} -> error "Malfunction.definitionSummar: TODO"
 
+
+worldB :: Binding
+worldB = Named "World" (Mblock 0 [])
+
 -- TODO: Maybe we'd like to refactor this so that we first do something like
 -- this (in the calling function)
 --
@@ -136,7 +140,7 @@ mlfMod allDefs = do
   let MMod funBindings im ts = compile env tlFunBindings
       primBindings = catMaybes $ Mlf.runTranslate (mapM (uncurry Mlf.compilePrim) prims) env
       axiomBindings = catMaybes $ Mlf.runTranslate (mapM Mlf.compileAxiom axioms) env
-  return $ MMod (axiomBindings ++ primBindings ++ funBindings) im ts
+  return $ MMod (worldB : axiomBindings ++ primBindings ++ funBindings) im ts
     where
       act :: Definition -> TCM (Maybe (Either (Either (QName, String) QName) (QName, TTerm)))
       act def@Defn{defName = q, theDef = d} = case d of

@@ -188,16 +188,16 @@ translateTerm = \case
           translateAltsChain t (Just d) alts
   TUnit             -> return unitT
   TSort             -> error "Malfunction.Compiler.translateTerm: TODO"
-  TErased           -> return wildcardTerm -- TODO: so... anything can go here?
+  TErased           -> return unitT -- TODO: We can probably erase these , but we would have to change 
+                                    -- the functions that use them , reduce their arity.
+                                    -- For now, we simply pass the unit type.
   TError TUnreachable -> return wildcardTerm
   TCoerce{}         -> error "Malfunction.Compiler.translateTerm: TODO"
 
 -- | We use this when we don't care about the translation.
 wildcardTerm :: Term
-wildcardTerm = nullary $ errorT "__UNREACHABLE__"
+wildcardTerm = errorT "__UNREACHABLE__"
 
-nullary :: Term -> Term
-nullary = Mlambda []
 
 indexToVarTerm :: MonadReader Env m => Int -> m Term
 indexToVarTerm i = do
@@ -463,7 +463,9 @@ translateCon nm ts = do
           vs   = take diff $ map pure ['a'..]
       return $ if diff == 0
       then Mblock tag ts'
-      else Mlambda vs (Mblock tag (ts' ++ map Mvar vs))
+      else case vs of
+             [] -> error "lambdas should not have zero arguments."
+             _ -> Mlambda vs (Mblock tag (ts' ++ map Mvar vs))
 
 -- | Ugly hack to represent builtin bools as integers.
 -- For now it checks whether the concrete name ends with "Bool.true" or "Bool.false"
@@ -621,13 +623,14 @@ trueCase = [CaseInt 1]
 -- | Translates an axiom to a malfunction binding. Returns `Nothing` if the axiom is unmapped.
 compileAxiom ::
   MonadReader Env m =>
-  QName                   -- The name of the axiomm
+  QName                   -- The name of the axiom
   -> m (Maybe Binding)    -- The resulting binding
-compileAxiom q = Just <$> namedBinding q x
+compileAxiom q = do
+                   case x of
+                     Just z -> Just <$> namedBinding q z
+                     Nothing -> pure $ Nothing
   where
-    x = fromMaybe unknownAxiom
-      $ Map.lookup (show q') Primitive.axioms
-    unknownAxiom = Mlambda [] $ errorT $ "Unknown axiom: " ++ show q'
+    x = Map.lookup (show q') Primitive.axioms
     q' = last . qnameToList $ q
 
 -- | Translates a primitive to a malfunction binding. Returns `Nothing` if the primitive is unmapped.
@@ -636,11 +639,11 @@ compilePrim
     QName -- ^ The qname of the primitive
   -> String -- ^ The name of the primitive
   -> m (Maybe Binding)
-compilePrim q s = Just <$> namedBinding q x
+compilePrim q s = case x of
+                    Just y -> Just <$> namedBinding q y
+                    Nothing -> pure $ Nothing
   where
-    x = fromMaybe unknownPrimitive
-      $ Map.lookup s Primitive.primitives
-    unknownPrimitive = Mlambda [] $ errorT $ "Unknown primitive: " ++ s
+    x = Map.lookup s Primitive.primitives
 
 namedBinding :: MonadReader Env m => QName -> Term -> m Binding
 namedBinding q t = (`Named`t) <$> nameToIdent q

@@ -5,6 +5,7 @@ import Agda.Compiler.Malfunction.EraseDefs
 import Agda.Compiler.Common
 import Data.List
 import Data.Bool
+import Data.Either
 import qualified Data.Map.Strict as M
 
 import Control.Monad.State
@@ -158,23 +159,17 @@ newOID = do
   pure s
 
 
--- TODO The algorithm can be better.
--- IMPORTANT ALGORITHM
--- We search and pick all applications. We need to remember the order that we picked them because
--- the this is the order that we will write our let statements.
--- An application might have other applications that we have found in a previous step.
--- When we create the let statements, those applications will also be replaced with the new variable name."
 
--- TODO This could be simplified. Careful , the algorithm is very tricky.
 
--- The key Term on the map is unchanged. The snd Term on the Map is changing and it is to be used at the let statement.
--- The term on the product is the changed one which we will use to assemble the result.
 
 lintersect :: [M.Map Term (Term , Integer , Bool)] -> M.Map Term (Term , Integer , Bool)
 lintersect (m : ms@(m2 : ms2)) = M.union (foldr (\a b -> M.intersection a b) m ms) (lintersect ms)
 lintersect (m : []) = M.empty
 lintersect [] = M.empty
 
+
+-- This algorithm introduces more lets than are necessary.
+-- TODO I need to clean the algorithm and if possible remove the unnecessary lets.
 
 
 findCF :: Term -> UIDState (M.Map Term (Term , Integer , Bool) , Term)
@@ -289,9 +284,69 @@ introduceLets t = fst $
 
 
 
+
+
+
+----------------------------------------------------------
+
+
+removeLetsVar :: Term -> Term
+removeLetsVar self@(Mvar i) = self
+removeLetsVar self@(Mlambda a t) = let rm = removeLetsVar t
+                                in Mlambda a rm
+removeLetsVar self@(Mapply a bs) = let (na : nbs) = map removeLetsVar (a : bs)
+                                in Mapply na nbs 
+removeLetsVar self@(Mlet bs t) = let (trm , tkp) = partitionEithers (map rpl bs)
+                                     mt = foldr (\x y -> replaceTr (fst x) (snd x) y) t trm
+                                     ntkp = foldr (\x y -> map (\(Named id t) -> Named id (replaceTr (fst x) (snd x) t )) y) tkp trm
+                                     nt = removeLetsVar mt
+                                 in (case ntkp of
+                                        [] -> nt
+                                        _  -> Mlet ntkp nt)         where
+  rpl :: Binding -> Either (Term , Term) Binding
+  rpl (Unnamed t) = error "Let bindings should have a name."
+  rpl (Named x (Mvar y)) = Left (Mvar x , (Mvar y))
+  rpl self@(Named x t) = Right self
+  rpl (Recursive rs) = error "Let bindings cannot be recursive."
+  
+removeLetsVar self@(Mswitch ta tb) = let nta = removeLetsVar ta
+                                         ntb = map removeLetsVar (map snd tb)
+                                     in Mswitch nta (zipWith (\(c , _) nb -> (c , nb)) tb ntb)
+removeLetsVar self@(Mintop1 x y t) = let nt = removeLetsVar t
+                                     in Mintop1 x y nt
+removeLetsVar self@(Mintop2 x y ta tb ) = let nta = removeLetsVar ta
+                                              ntb = removeLetsVar tb
+                                          in Mintop2 x y nta ntb
+removeLetsVar self@(Mconvert x y t) = let nt = removeLetsVar t
+                                      in Mconvert x y nt
+removeLetsVar self@(Mvecnew x ta tb) = let nta = removeLetsVar ta
+                                           ntb = removeLetsVar tb
+                                       in Mvecnew x nta ntb
+removeLetsVar self@(Mvecget x ta tb) = let nta = removeLetsVar ta
+                                           ntb = removeLetsVar tb
+                                       in Mvecget x nta ntb
+removeLetsVar self@(Mvecset x ta tb tc) = let nta = removeLetsVar ta
+                                              ntb = removeLetsVar tb
+                                              ntc = removeLetsVar tc
+                                          in Mvecset x nta ntb ntc
+removeLetsVar self@(Mveclen x t) = let nt = removeLetsVar t
+                                   in Mveclen x nt
+removeLetsVar self@(Mblock x bs) = let nbs = map removeLetsVar bs
+                                   in Mblock x nbs
+removeLetsVar self@(Mfield x t) = let nt = removeLetsVar t
+                                  in Mfield x nt
+removeLetsVar x =  x
+
+
+
+
+-----------------------------------------------------------
+
+
 -- Used in Functions.
 optimizeLets :: Term -> Term
-optimizeLets (Mlambda ids t) = Mlambda ids (introduceLets $ removeLets t)
+optimizeLets (Mlambda ids t) = Mlambda ids (removeLetsVar $ introduceLets $ removeLets t) -- (introduceLets $ removeLets t)
+optimizeLets (Mblock tag tms) = Mblock tag (map (removeLetsVar . introduceLets . removeLets) tms)
 optimizeLets r = r
 
 

@@ -11,34 +11,34 @@ import Agda.Compiler.Malfunction.AST
 
 axioms :: Map String Term
 axioms =
-  [ notMapped "Char.Char"
-  , notMapped "IO.IO"
-  , notMapped "String.String"
-  , notMapped "IsOne"
-  , notMapped "IsOne1"
-  , notMapped "IsOne2"
-  , notMapped "isOneEmpty"
-  , notMapped "itIsOne"
-  , notMapped "Level"
-  , notMapped "Bytes"
-  , notMapped "eqBytes"
-  , notMapped "append"
-  , notMapped "empty"
-  , notMapped "erasedBottom"
-  , notMapped "Unsafe._.trustme"
-  , notMapped "exitWith'"
-  , notMapped "getArgs"
-  , notMapped "getChar"
-  , notMapped "getProgName"
-  , notMapped "ioReturn"
-  , notMapped "putChar"
-  , "putStrLn" |-> Mglobal ["Pervasives", "print_endline"]
+  [
+--     notMapped "Char.Char"
+--   , notMapped "IO.IO"
+--   , notMapped "String.String"
+--   , notMapped "IsOne"
+--   , notMapped "IsOne1"
+--   , notMapped "IsOne2"
+--   , notMapped "isOneEmpty"
+--   , notMapped "itIsOne"
+--   , notMapped "Level"
+--   , notMapped "Bytes"
+--   , notMapped "eqBytes"
+--   , notMapped "append"
+--   , notMapped "empty"
+--   , notMapped "erasedBottom"
+--   , notMapped "Unsafe._.trustme"
+--   , notMapped "exitWith'"
+--   , notMapped "getArgs"
+--   , notMapped "getChar"
+--   , notMapped "getProgName"
+--   , notMapped "ioReturn"
+--   , notMapped "putChar"
+    "putStrLn" |-> Mglobal ["Pervasives", "print_endline"]
   , "putStr"   |-> Mglobal ["Pervasives", "print_string"]
-  , notMapped "ioBind"
+--   , notMapped "ioBind"
   , "primStringAppend" |-> primStringAppend
   ]
-  where
-    notMapped n = (n, Mlambda [] $ errorT $ "Axiom not yet mapped: " ++ n)
+
 
 primitives :: Map String Term
 primitives =
@@ -50,8 +50,8 @@ primitives =
   , "primIntegerMod"      |-> binOp Mod
   , "primIntegerEquality" |-> binOp Eq
   , "primIntegerLess"     |-> binOp Lt
-  , notMapped "primIntegerAbs"
-  , notMapped "primNatToInteger"
+--  , notMapped "primIntegerAbs"
+--  , notMapped "primNatToInteger"
   , "primShowInteger"     |-> Mglobal ["Z", "to_string"]
 
   -- Natural number functions
@@ -66,74 +66,73 @@ primitives =
   -- Level functions
   , "primLevelZero"       |-> zeroT
   , "primLevelSuc"        |-> sucT
-  , notMapped "primLevelMax"
+--  , notMapped "primLevelMax"
 
   -- Floating point functions
-  , notMapped "primNatToFloat"
-  , notMapped "primFloatPlus"
-  , notMapped "primFloatMinus"
-  , notMapped "primFloatTimes"
-  , notMapped "primFloatNegate"
-  , notMapped "primFloatDiv"
+--  , notMapped "primNatToFloat"
+--  , notMapped "primFloatPlus"
+--  , notMapped "primFloatMinus"
+--  , notMapped "primFloatTimes"
+--  , notMapped "primFloatNegate"
+--  , notMapped "primFloatDiv"
   -- ASR (2016-09-29). We use bitwise equality for comparing Double
   -- because Haskell's Eq, which equates 0.0 and -0.0, allows to prove
   -- a contradiction (see Issue #2169).
-  , notMapped "primFloatEquality"
-  , notMapped "primFloatNumericalEquality"
-  , notMapped "primFloatNumericalLess"
-  , notMapped "primFloatSqrt"
-  , notMapped "primRound"
-  , notMapped "primFloor"
-  , notMapped "primCeiling"
-  , notMapped "primExp"
-  , notMapped "primLog"
-  , notMapped "primSin"
-  , notMapped "primCos"
-  , notMapped "primTan"
-  , notMapped "primASin"
-  , notMapped "primACos"
-  , notMapped "primATan"
-  , notMapped "primATan2"
-  , notMapped "primShowFloat"
-
-  -- Character functions
-  , notMapped "primCharEquality"
-  , notMapped "primIsLower"
-  , notMapped "primIsDigit"
-  , notMapped "primIsAlpha"
-  , notMapped "primIsSpace"
-  , notMapped "primIsAscii"
-  , notMapped "primIsLatin1"
-  , notMapped "primIsPrint"
-  , notMapped "primIsHexDigit"
-  , notMapped "primToUpper"
-  , notMapped "primToLower"
-  , notMapped "primCharToNat"
-  , notMapped "primNatToChar"
-  , notMapped "primShowChar"
-
-  -- String functions
-  , notMapped "primStringToList"
-  , notMapped "primStringFromList"
+--   , notMapped "primFloatEquality"
+--   , notMapped "primFloatNumericalEquality"
+--   , notMapped "primFloatNumericalLess"
+--   , notMapped "primFloatSqrt"
+--   , notMapped "primRound"
+--   , notMapped "primFloor"
+--   , notMapped "primCeiling"
+--   , notMapped "primExp"
+--   , notMapped "primLog"
+--   , notMapped "primSin"
+--   , notMapped "primCos"
+--   , notMapped "primTan"
+--   , notMapped "primASin"
+--   , notMapped "primACos"
+--   , notMapped "primATan"
+--   , notMapped "primATan2"
+--   , notMapped "primShowFloat"
+-- 
+--   -- Character functions
+--   , notMapped "primCharEquality"
+--   , notMapped "primIsLower"
+--   , notMapped "primIsDigit"
+--   , notMapped "primIsAlpha"
+--   , notMapped "primIsSpace"
+--   , notMapped "primIsAscii"
+--   , notMapped "primIsLatin1"
+--   , notMapped "primIsPrint"
+--   , notMapped "primIsHexDigit"
+--   , notMapped "primToUpper"
+--   , notMapped "primToLower"
+--   , notMapped "primCharToNat"
+--   , notMapped "primNatToChar"
+--   , notMapped "primShowChar"
+-- 
+--   -- String functions
+--   , notMapped "primStringToList"
+--   , notMapped "primStringFromList"
   , "primStringAppend" |-> primStringAppend
-  , notMapped "primStringEquality"
-  , notMapped "primShowString"
+--   , notMapped "primStringEquality"
+--   , notMapped "primShowString"
 
   -- Other stuff
-  , notMapped "primTrustMe"
+--   , notMapped "primTrustMe"
     -- This needs to be force : A → ((x : A) → B x) → B x rather than seq because of call-by-name.
-  , notMapped "primForce"
-  , notMapped "primForceLemma"
-  , notMapped "primQNameEquality"
-  , notMapped "primQNameLess"
-  , notMapped "primShowQName"
-  , notMapped "primQNameFixity"
-  , notMapped "primMetaEquality"
-  , notMapped "primMetaLess"
-  , notMapped "primShowMeta"
+--   , notMapped "primForce"
+--   , notMapped "primForceLemma"
+--   , notMapped "primQNameEquality"
+--   , notMapped "primQNameLess"
+--   , notMapped "primShowQName"
+--   , notMapped "primQNameFixity"
+--   , notMapped "primMetaEquality"
+--   , notMapped "primMetaLess"
+--   , notMapped "primShowMeta"
   ]
-  where
-    notMapped n = (n, Mlambda [] $ errorT $ "Primitive not yet mapped: " ++ n)
+
 
 (|->) :: a -> b -> (a, b)
 (|->) = (,)
