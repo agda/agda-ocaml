@@ -22,7 +22,7 @@ library
                      , Agda.Compiler.Malfunction
                      , Agda.Compiler.Malfunction.Primitive
                      , Agda.Compiler.Malfunction.Instances
-  build-depends:       Agda       >= 2.5.2
+  build-depends:       Agda       >= 2.6.0
                      , base       >= 4.7  && < 5
                      , containers >= 0.5  && < 0.6
                      , extra      >= 1.5  && < 1.7
