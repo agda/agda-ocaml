@@ -7,7 +7,7 @@ extra-deps:
   - tasty-th-0.1.4
   - cpphs-1.20.8
   - git: https://github.com/agda/agda.git
-    commit: c14f2336baee03edd981641f3d78b22d19faa45a
+    commit: 177137a5052c4cdacfadb1a77517737b500defa4
   - git: https://git.coop/lwm/tasty-discover.git
     commit: 1c24f455d314ac969326252b0052af8c3a046496
 
