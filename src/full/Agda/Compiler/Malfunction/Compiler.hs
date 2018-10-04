@@ -60,7 +60,6 @@ import           Numeric (showHex)
 import           Data.Char (ord)
 
 import           Agda.Compiler.Malfunction.AST
-import           Agda.Compiler.Common
 import           Agda.Compiler.Malfunction.EraseDefs
 import           Agda.Compiler.Malfunction.Optimize
 import qualified Agda.Compiler.Malfunction.Primitive as Primitive

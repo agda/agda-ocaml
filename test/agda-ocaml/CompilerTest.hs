@@ -13,7 +13,6 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Utils
 
-
 import           Agda.Compiler.Malfunction.AST
 import           Agda.Compiler.Malfunction.Compiler
 import           Agda.Syntax.Common                 (NameId)
@@ -140,7 +139,7 @@ constructorT :: Ident -> Ident -> Mod
 constructorT  f one = MMod
   [ Named f   (Mlambda ["v0"] (Mapply (Mvar "v0") [Mblock 0 []]))
   , Named one (Mapply (Mvar f) [Mlambda ["a"] (Mblock 1 [Mvar "a"])])
-  ] []
+  ] mempty mempty
 
 qnameAndIdent :: Word64 -> String -> (QName, Ident)
 qnameAndIdent nameid concrete = (simplerQName (nameid, concrete),

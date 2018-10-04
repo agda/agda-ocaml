@@ -145,9 +145,5 @@ zeroT = Mint (CInt 0)
 sucT :: Term
 sucT = Mlambda ["a"] (Mintop2 Add TInt (Mvar "a") (Mint (CInt 1)))
 
--- FIXME: Copied from `Compiler` due to an otherwise cyclic dependency.
-errorT :: String -> Term
-errorT err = Mapply (Mglobal ["Pervasives", "failwith"]) [Mstring err]
-
 primStringAppend :: Term
 primStringAppend = Mglobal ["Pervasives", "^"]

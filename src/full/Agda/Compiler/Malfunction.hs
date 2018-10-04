@@ -1,14 +1,13 @@
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wall #-}
+-- TODO Fix these:
+{-# OPTIONS_GHC -Wno-unused-matches -Wno-unused-top-binds #-}
 module Agda.Compiler.Malfunction (backend) where
 
 import           Agda.Compiler.Backend
 import           Agda.Compiler.CallCompiler
 import           Agda.Compiler.Common
 import           Agda.Utils.Pretty
-import           Agda.Utils.String
-import           Agda.Utils.FileName
-import           Agda.Utils.Impossible
 import           Control.Monad
 import           Control.Monad.Extra
 import           Control.Monad.Trans
@@ -28,8 +27,6 @@ import           System.Directory
 
 import           Agda.Compiler.Malfunction.AST
 import qualified Agda.Compiler.Malfunction.Compiler  as Mlf
-import           Agda.Compiler.Malfunction.Run
-import qualified Agda.Compiler.Malfunction.Run       as Run
 
 
 _IMPOSSIBLE :: a
@@ -58,7 +55,7 @@ ttFlags =
   [ Option [] ["mlf"] (NoArg enable)
     "Generate Malfunction"
   , Option [] ["dont-call-mlf"] (NoArg dontCallMLF)
-    "Runs the malfunction compiler on the output file"
+    "Do not run the malfunction compiler on the output file"
   , Option [] ["d"] (NoArg debugMLF)
     "Generate Debugging Information."
   ]
