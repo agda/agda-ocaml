@@ -14,7 +14,7 @@ findAllIdents (_ : xs) = findAllIdents xs
 findAllIdents [] = []
 
 findMain :: [(Ident , Term)] -> Maybe (Ident , Term)
-findMain ms = let fms = filter (\(x , _t) -> "main" `isSuffixOf` x) ms
+findMain ms = let fms = filter (\(Ident x , _t) -> "main" `isSuffixOf` x) ms
               in case fms of
                   [] -> Nothing
                   [x] -> Just x

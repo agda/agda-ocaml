@@ -7,7 +7,7 @@ This module defines the abstract syntax of
 <https://github.com/stedolan/malfunction/blob/master/docs/spec.md Malfunction
 language specification>
 -}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, UndecidableInstances #-}
 {-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.AST
   ( IntType(..)
@@ -18,8 +18,8 @@ module Agda.Compiler.Malfunction.AST
   , Mutability(..)
   , BlockTag
   , Case(..)
-  , Ident
-  , Longident
+  , Ident(..)
+  , Longident(..)
   , Mod(..)
   , Term(..)
   , Binding(..)
@@ -38,6 +38,7 @@ import Data.Int
 -- let's go with Agda's choice.
 import Agda.Utils.Pretty
 import Data.Data (Data, Typeable)
+import GHC.Exts (IsList(..), IsString(..))
 
 -- | The integer types.
 data IntType
@@ -118,7 +119,9 @@ deriving stock instance Typeable Mutability
 -- For this reason we may want to make BlockTag a newtype and only export a constructor.
 --
 -- | A tag used in the construction of $Block@s.
-type BlockTag = Int
+newtype BlockTag = BlockTag Int
+
+deriving newtype instance Num BlockTag
 
 -- The spec and the ocaml implementation are inconsistent when defining Case.
 -- I'll use the definition (examples) from the spec to guide this implementation.
@@ -143,11 +146,27 @@ deriving stock instance Eq Case
 deriving stock instance Data Case
 deriving stock instance Typeable Case
 
+-- TODO Maybe move to 'Text'?
 -- | An identifier used to reference other values in the malfunction module.
-type Ident = String
+newtype Ident = Ident String
+
+deriving stock instance Show Ident
+deriving stock instance Eq Ident
+deriving stock instance Data Ident
+deriving stock instance Typeable Ident
+deriving newtype instance IsString Ident
+deriving newtype instance Semigroup Ident
+deriving newtype instance Monoid Ident
+deriving newtype instance Ord Ident
 
 -- | A long identifier is used to reference OCaml values (using @Mglobal@).
-type Longident = [Ident]
+newtype Longident = Longident [Ident]
+
+deriving stock instance Show Longident
+deriving stock instance Eq Longident
+deriving stock instance Data Longident
+deriving stock instance Typeable Longident
+deriving newtype instance IsList Longident
 
 --data Longident
 --  = Lident String
@@ -305,10 +324,10 @@ instance Pretty IntConst where
     CBigint i -> pretty i <.> "ibig"
 
 prettyLongident :: Longident -> Doc
-prettyLongident = hsep . map prettyIdent
+prettyLongident = hsep . map prettyIdent . toList
 
 prettyIdent :: Ident -> Doc
-prettyIdent = text . ('$':)
+prettyIdent (Ident i) = text $ ('$':) $ i
 
 prettyCaseExpression :: ([Case], Term) -> Doc
 prettyCaseExpression (cs, t) = level (prettyList__ cs) (pretty t)

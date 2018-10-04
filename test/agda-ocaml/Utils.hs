@@ -14,15 +14,15 @@ import           Data.Either.Extra
 -- | .\/Golden\/FstSnd.agda  .\/Golden\/FstSnd_a.golden
 -- mkdGoldenTest "FstSnd" "a"
 -- mkdGoldenTest "FstSnd" "b"
-mkGoldenTest :: String -> (Either String Ident) -> TestTree
+mkGoldenTest :: String -> (Either Ident Ident) -> TestTree
 mkGoldenTest modPrefix testId = goldenVsString testName goldenPath result
   where
-    testIdStr = fromEither testId
+    Ident testIdStr = fromEither testId
     result = case testId of
       Left str -> B.pack <$> compileRun agdap
       Right var -> B.pack <$> compileRunPrint agdap var'
     goldenPath = "Golden" </> modPrefix ++ "_" ++ testIdStr <.> "golden"
-    var' = modPrefix ++ "." ++ testIdStr
+    var' = Ident $ modPrefix ++ "." ++ testIdStr
     agdap = "Golden" </> modPrefix ++ ".agda"
     testName = modPrefix ++ " " ++ testIdStr
 

@@ -47,7 +47,7 @@ ttFlags :: [OptDescr (Flag MlfOptions)]
 ttFlags =
   [ Option [] ["mlf"] (NoArg $ \ o -> return o{ _enabled = True })
     "Generate Malfunction"
-  , Option ['r'] ["print-var"] (ReqArg (\r o -> return o{_resultVar = Just r}) "VAR")
+  , Option ['r'] ["print-var"] (ReqArg (\r o -> return o{_resultVar = Just (Ident r)}) "VAR")
     "(DEBUG) Run the module and print the integer value of a variable"
   , Option ['o'] [] (ReqArg (\r o -> return o{_outputFile = Just r}) "FILE")
     "(DEBUG) Place outputFile resulting module into FILE"
@@ -222,11 +222,12 @@ printVars opts modl@(MMod binds _) simpleVars = when (_debug opts) $ do
 
 -- | "Test2.a" --> 24.1932f7ddf4cc7d3a.Test2.a
 fromSimpleIdent :: [Binding] -> Ident -> Maybe Ident
-fromSimpleIdent binds simple = listToMaybe (filter (isSuffixOf simple) (getNames binds))
+fromSimpleIdent binds (Ident simple)
+  = Ident <$> listToMaybe (filter (isSuffixOf simple) (getNames binds))
   where
     getNames = mapMaybe getName
-    getName (Named u _) = Just u
-    getName _           = Nothing
+    getName (Named (Ident u) _) = Just u
+    getName _                   = Nothing
 
 -- | Returns all constructors grouped by data type.
 getConstructors :: [Definition] -> [[QName]]

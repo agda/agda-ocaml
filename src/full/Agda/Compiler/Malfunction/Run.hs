@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE OverloadedLists, OverloadedStrings #-}
 module Agda.Compiler.Malfunction.Run
   ( compileRunPrint
   , compileModFile
@@ -14,6 +15,7 @@ import           System.FilePath
 import           System.IO
 import           System.IO.Temp
 import           System.Process
+import           GHC.Exts (fromList)
 
 import           Agda.Compiler.Malfunction.AST
 
@@ -52,7 +54,10 @@ withPrintInts :: Mod -> [Ident] -> Mod
 withPrintInts (MMod bs expo) ids = MMod bs' expo
   where
     bs' = bs ++ map printInt ids
-    printInt var = Unnamed $ Mapply (Mglobal ["Pervasives", "print_int"]) [Mvar var]
+    printInt var
+      = Unnamed
+      $ Mapply (Mglobal $ fromList ["Pervasives", "print_int"])
+      [Mvar var]
 
 runModPrintInts :: Mod -> [Ident] -> IO String
 runModPrintInts ids = runMod . withPrintInts ids
@@ -62,7 +67,7 @@ runModPrintInts ids = runMod . withPrintInts ids
 -- Note that this method uses the executable named `agda-ocaml` as registered with
 -- `stack`.
 compileRunPrint :: FilePath -> Ident -> IO String
-compileRunPrint agdap var =
+compileRunPrint agdap (Ident var) =
   withSystemTempFile "module.mlf" $
     \mlfp mlfh -> do
       callProcess "stack" ["exec", "agda-ocaml", "--", "-v0", "--mlf", agdap

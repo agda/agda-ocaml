@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module CompilerTest where
 
 -- TODO: Emacs keeps complaining that Test.Tasty.Discover is a member
