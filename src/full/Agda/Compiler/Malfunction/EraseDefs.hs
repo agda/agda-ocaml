@@ -25,13 +25,17 @@ findMain ms = let fms = filter (\(x , _t) -> "main" `isSuffixOf` x) ms
 
 
 findAllUsedBindings :: M.Map Ident Term -> Term -> M.Map Ident Term
-findAllUsedBindings env t = let nid = foldr (++) [] (map (\x -> case (M.lookup x env) of
-                                                                  Just a -> [(x , a)]
-                                                                  _ -> []) (findUsedIdents t))
-                                newItems = M.fromList nid
-                                nEnv = M.difference env newItems
-                            in  snd $ foldr (\(_ , t) (env , items) -> let ni = findAllUsedBindings env t in (M.difference env ni , M.union ni items)) (nEnv , newItems) nid
-                                
+findAllUsedBindings env0 t0 = snd $ foldr g (nEnv , newItems) nid
+  where
+  nid = foldr (++) [] (map f (findUsedIdents t0))
+  newItems = M.fromList nid
+  nEnv = M.difference env0 newItems
+  f x = case M.lookup x env0 of
+    Just a -> [(x , a)]
+    _ -> []
+  g (_ , t) (env , items) = (M.difference env ni , M.union ni items)
+    where
+    ni = findAllUsedBindings env t
 
 -- The list is greater than the global lists because we have local identifiers.
 findUsedIdents :: Term -> [Ident]
