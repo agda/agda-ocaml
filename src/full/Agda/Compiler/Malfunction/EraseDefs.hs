@@ -5,16 +5,13 @@ import Prelude hiding (id)
 import Agda.Compiler.Malfunction.AST
 import Data.List
 import qualified Data.Map.Strict as M
+import qualified Data.Generics.Uniplate.Data as Uniplate
 
 findAllIdents :: [Binding] -> [(Ident , Term)]
-findAllIdents ((Named id t) : xs) = (id , t) : findAllIdents xs
+findAllIdents (Named id t : xs) = (id , t) : findAllIdents xs
 findAllIdents (Recursive ys : xs) = ys ++ findAllIdents xs
 findAllIdents (_ : xs) = findAllIdents xs
 findAllIdents [] = []
-
-toTerm :: Binding -> Term
-toTerm (Named _ t) = t
-toTerm _ = undefined
 
 findMain :: [(Ident , Term)] -> Maybe (Ident , Term)
 findMain ms = let fms = filter (\(x , _t) -> "main" `isSuffixOf` x) ms
@@ -27,7 +24,7 @@ findMain ms = let fms = filter (\(x , _t) -> "main" `isSuffixOf` x) ms
 findAllUsedBindings :: M.Map Ident Term -> Term -> M.Map Ident Term
 findAllUsedBindings env0 t0 = snd $ foldr g (nEnv , newItems) nid
   where
-  nid = foldr (++) [] (map f (findUsedIdents t0))
+  nid = concatMap f $ findUsedIdents t0
   newItems = M.fromList nid
   nEnv = M.difference env0 newItems
   f x = case M.lookup x env0 of
@@ -39,21 +36,27 @@ findAllUsedBindings env0 t0 = snd $ foldr g (nEnv , newItems) nid
 
 -- The list is greater than the global lists because we have local identifiers.
 findUsedIdents :: Term -> [Ident]
-findUsedIdents (Mvar i) = i : []
-findUsedIdents (Mlambda _ t) = findUsedIdents t
-findUsedIdents (Mapply a bs) = findUsedIdents a ++ (foldr (++) [] (map findUsedIdents bs))
-findUsedIdents (Mlet bs t) =  foldr (++) (findUsedIdents t) (map (\x -> findUsedIdents $ toTerm x) bs)
-findUsedIdents (Mswitch ta tb) = foldr (++) (findUsedIdents ta) (map (\x -> findUsedIdents $ snd x) tb)
-findUsedIdents (Mintop1 _ _ t) = findUsedIdents t
-findUsedIdents (Mintop2 _ _ ta tb ) = findUsedIdents ta ++ findUsedIdents tb
-findUsedIdents (Mconvert _ _ t) = findUsedIdents t
-findUsedIdents (Mvecnew _ ta tb) = findUsedIdents ta ++ findUsedIdents tb
-findUsedIdents (Mvecget _ ta tb) = findUsedIdents ta ++ findUsedIdents tb
-findUsedIdents (Mvecset _ ta tb tc) = findUsedIdents ta ++ findUsedIdents tb ++ findUsedIdents tc
-findUsedIdents (Mveclen _ t) = findUsedIdents t
-findUsedIdents (Mblock _ bs) = foldr (++) [] (map findUsedIdents bs)
-findUsedIdents (Mfield _ t) = findUsedIdents t
-findUsedIdents _ = []
+findUsedIdents = foldMap step . Uniplate.universe
+  where
+  step :: Term -> [Ident]
+  step = \case
+    Mvar i             -> pure i
+    Mlambda is _       -> is
+    Mapply{}           -> mempty
+    Mlet{}             -> mempty
+    Mint{}             -> mempty
+    Mstring{}          -> mempty
+    Mglobal{}          -> mempty
+    Mswitch{}          -> mempty
+    Mintop1{}          -> mempty
+    Mintop2{}          -> mempty
+    Mconvert{}         -> mempty
+    Mvecnew{}          -> mempty
+    Mvecget{}          -> mempty
+    Mvecset{}          -> mempty
+    Mveclen{}          -> mempty
+    Mblock{}           -> mempty
+    Mfield{}           -> mempty
 
 
 eraseB :: [Binding] -> [Binding]

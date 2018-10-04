@@ -201,7 +201,7 @@ mlfPostModule :: MlfOptions -> [Definition] -> TCM Mod
 mlfPostModule opts defs = do
   modl@(MMod binds _) <- mlfMod defs
   let modlTxt = prettyShow $ fromMaybe modl
-       ((withPrintInts modl . pure)  <$>  (_resultVar opts >>=  fromSimpleIdent binds))
+       (withPrintInts modl . pure <$> (_resultVar opts >>=  fromSimpleIdent binds))
   when (_debug opts) $ liftIO . putStrLn $ modlTxt
   whenJust (_resultVar opts) (printVars opts modl . pure)
   whenJust (_outputFile opts) (liftIO . (`writeFile`modlTxt))

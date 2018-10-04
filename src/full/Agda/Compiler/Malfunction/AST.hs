@@ -37,6 +37,7 @@ import Data.Int
 -- `pretty` but this is not the one used for Treeless terms, so for consistency,
 -- let's go with Agda's choice.
 import Agda.Utils.Pretty
+import Data.Data (Data, Typeable)
 
 -- | The integer types.
 data IntType
@@ -44,7 +45,11 @@ data IntType
   | TInt32
   | TInt64
   | TBigint
-  deriving (Show, Eq)
+
+deriving stock instance Show IntType
+deriving stock instance Eq IntType
+deriving stock instance Data IntType
+deriving stock instance Typeable IntType
 
 -- | An integer value tagged with its corresponding type.
 data IntConst
@@ -68,25 +73,45 @@ data IntConst
   | CInt32 Int32
   | CInt64 Int64
   | CBigint Integer
-  deriving (Show, Eq)
+
+deriving stock instance Show IntConst
+deriving stock instance Eq IntConst
+deriving stock instance Data IntConst
+deriving stock instance Typeable IntConst
 
 -- | A unary operator.
 data UnaryIntOp = Neg | Not
-  deriving (Show, Eq)
+
+deriving stock instance Show UnaryIntOp
+deriving stock instance Eq UnaryIntOp
+deriving stock instance Data UnaryIntOp
+deriving stock instance Typeable UnaryIntOp
 
 -- | A binary operator.
 data BinaryIntOp
   = Add | Sub | Mul | Div | Mod | And | Or | Xor | Lsl | Lsr | Asr
   | Lt | Gt | Lte | Gte | Eq
-  deriving (Show, Eq)
+
+deriving stock instance Show BinaryIntOp
+deriving stock instance Eq BinaryIntOp
+deriving stock instance Data BinaryIntOp
+deriving stock instance Typeable BinaryIntOp
 
 -- | Vector types.
 data VectorType = Array | Bytevec
-  deriving (Show, Eq)
+
+deriving stock instance Show VectorType
+deriving stock instance Eq VectorType
+deriving stock instance Data VectorType
+deriving stock instance Typeable VectorType
 
 -- | Mutability
 data Mutability = Inm | Mut
-  deriving (Show, Eq)
+
+deriving stock instance Show Mutability
+deriving stock instance Eq Mutability
+deriving stock instance Data Mutability
+deriving stock instance Typeable Mutability
 
 -- NOTE: Any tag value above 200 is an error in malfunction.
 --
@@ -112,7 +137,11 @@ data Case
   | CaseInt Int
   -- (n m)
   | Intrange (Int, Int)
-  deriving (Show, Eq)
+
+deriving stock instance Show Case
+deriving stock instance Eq Case
+deriving stock instance Data Case
+deriving stock instance Typeable Case
 
 -- | An identifier used to reference other values in the malfunction module.
 type Ident = String
@@ -130,7 +159,12 @@ type Longident = [Ident]
 -- beginning with the atom export."
 --
 -- | Defines a malfunction module.
-data Mod = MMod [Binding] [Term] deriving (Eq, Show)
+data Mod = MMod [Binding] [Term]
+
+deriving stock instance Show Mod
+deriving stock instance Eq Mod
+deriving stock instance Data Mod
+deriving stock instance Typeable Mod
 
 -- | The overall syntax of malfunction terms.
 data Term
@@ -154,7 +188,31 @@ data Term
   -- Blocks
   | Mblock Int [Term]
   | Mfield Int Term
-  deriving (Show, Eq)
+
+deriving stock instance Show Term
+deriving stock instance Eq Term
+deriving stock instance Data Term
+deriving stock instance Typeable Term
+
+-- instance Uniplate Term where
+--   uniplate = \case
+--     Mvar i              -> plate Mvar     |- i
+--     Mlambda is t0       -> plate Mlambda  |- is  |* t0
+--     Mapply t ts         -> plate Mapply   |* t   ||* ts
+--     Mlet bs t           -> plate Mlet     |- bs  |*  t
+--     Mint c              -> plate Mint     |- c
+--     Mstring s           -> plate Mstring  |- s
+--     Mglobal i           -> plate Mglobal  |- i
+--     Mswitch t xs        -> plate Mswitch  |* t   ||+ xs
+--     Mintop1 op tp t     -> plate Mintop1  |- op  |- tp |* t
+--     Mintop2 op tp t0 t1 -> plate Mintop2  |- op  |- tp |* t0 |* t1
+--     Mconvert src trg t  -> plate Mconvert |- src |- trg |* t
+--     Mvecnew tp t0 t1    -> plate Mvecnew  |- tp  |* t0 |* t1
+--     Mvecget tp t0 t1    -> plate Mvecget  |- tp  |* t0 |* t1
+--     Mvecset tp t0 t1 t2 -> plate Mvecset  |- tp  |* t0 |* t1 |* t2
+--     Mveclen tp t0       -> plate Mveclen  |- tp  |* t0
+--     Mblock n ts         -> plate Mblock   |- n   ||* ts
+--     Mfield n t          -> plate Mfield   |- n   |* t
 
 -- | Bindings
 --
@@ -177,7 +235,11 @@ data Binding
   = Unnamed Term
   | Named Ident Term
   | Recursive [(Ident, Term)]
-  deriving (Show, Eq)
+
+deriving stock instance Show Binding
+deriving stock instance Eq Binding
+deriving stock instance Data Binding
+deriving stock instance Typeable Binding
 
 textShow :: Show a => a -> Doc
 textShow = text . show

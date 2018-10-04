@@ -34,6 +34,25 @@ library
                      , uniplate   >= 1.6  && < 1.7
   default-language:    Haskell2010
 
+  extensions:
+    NamedWildCards
+    TypeSynonymInstances
+    FlexibleInstances
+    FlexibleContexts
+    ScopedTypeVariables
+    ViewPatterns
+    DeriveGeneric
+    LambdaCase
+    TypeApplications
+    StandaloneDeriving
+    GADTs
+    GeneralizedNewtypeDeriving
+    TypeFamilies
+    MultiParamTypeClasses
+    DerivingStrategies
+    DeriveAnyClass
+    DeriveDataTypeable
+
 executable agda-ocaml
   hs-source-dirs:      app
   main-is:             Main.hs

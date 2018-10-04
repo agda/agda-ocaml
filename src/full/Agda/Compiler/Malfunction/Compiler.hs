@@ -119,6 +119,8 @@ mkCompilerEnv allNames conMap = Env {
 mlfTagRange :: (Int, Int)
 mlfTagRange = (0, 199)
 
+-- TODO Combine with `mkCompilerEnv`
+{-# ANN mkCompilerEnv2 (id @String "HLint: Reduce duplication") #-}
 mkCompilerEnv2 :: [QName] -> [[(QName, Arity)]] -> Env
 mkCompilerEnv2 allNames consByDtype = Env {
   _conMap = conMap

@@ -16,7 +16,7 @@ instance (Show (t a), Show a) => Show (Red t a)
        showsPrec _ (R(a,b,c)) =
          ("R("++) . shows a . (","++) . shows b . (","++) . shows c . (")"++)
 
-data AddLayer t a = B(Tr(Red t) a) deriving Show
+newtype AddLayer t a = B(Tr(Red t) a) deriving Show
 
 data RB t a = Base (t a) | Next (RB (AddLayer t) a)
 
