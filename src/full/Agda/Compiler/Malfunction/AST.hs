@@ -47,9 +47,9 @@ data IntType
   | TInt64
   | TBigint
 
-deriving stock instance Show IntType
-deriving stock instance Eq IntType
-deriving stock instance Data IntType
+deriving stock instance Show     IntType
+deriving stock instance Eq       IntType
+deriving stock instance Data     IntType
 deriving stock instance Typeable IntType
 
 -- | An integer value tagged with its corresponding type.
@@ -75,17 +75,17 @@ data IntConst
   | CInt64 Int64
   | CBigint Integer
 
-deriving stock instance Show IntConst
-deriving stock instance Eq IntConst
-deriving stock instance Data IntConst
+deriving stock instance Show     IntConst
+deriving stock instance Eq       IntConst
+deriving stock instance Data     IntConst
 deriving stock instance Typeable IntConst
 
 -- | A unary operator.
 data UnaryIntOp = Neg | Not
 
-deriving stock instance Show UnaryIntOp
-deriving stock instance Eq UnaryIntOp
-deriving stock instance Data UnaryIntOp
+deriving stock instance Show     UnaryIntOp
+deriving stock instance Eq       UnaryIntOp
+deriving stock instance Data     UnaryIntOp
 deriving stock instance Typeable UnaryIntOp
 
 -- | A binary operator.
@@ -93,25 +93,25 @@ data BinaryIntOp
   = Add | Sub | Mul | Div | Mod | And | Or | Xor | Lsl | Lsr | Asr
   | Lt | Gt | Lte | Gte | Eq
 
-deriving stock instance Show BinaryIntOp
-deriving stock instance Eq BinaryIntOp
-deriving stock instance Data BinaryIntOp
+deriving stock instance Show     BinaryIntOp
+deriving stock instance Eq       BinaryIntOp
+deriving stock instance Data     BinaryIntOp
 deriving stock instance Typeable BinaryIntOp
 
 -- | Vector types.
 data VectorType = Array | Bytevec
 
-deriving stock instance Show VectorType
-deriving stock instance Eq VectorType
-deriving stock instance Data VectorType
+deriving stock instance Show     VectorType
+deriving stock instance Eq       VectorType
+deriving stock instance Data     VectorType
 deriving stock instance Typeable VectorType
 
 -- | Mutability
 data Mutability = Inm | Mut
 
-deriving stock instance Show Mutability
-deriving stock instance Eq Mutability
-deriving stock instance Data Mutability
+deriving stock instance Show     Mutability
+deriving stock instance Eq       Mutability
+deriving stock instance Data     Mutability
 deriving stock instance Typeable Mutability
 
 -- NOTE: Any tag value above 200 is an error in malfunction.
@@ -141,32 +141,32 @@ data Case
   -- (n m)
   | Intrange (Int, Int)
 
-deriving stock instance Show Case
-deriving stock instance Eq Case
-deriving stock instance Data Case
+deriving stock instance Show     Case
+deriving stock instance Eq       Case
+deriving stock instance Data     Case
 deriving stock instance Typeable Case
 
 -- TODO Maybe move to 'Text'?
 -- | An identifier used to reference other values in the malfunction module.
 newtype Ident = Ident String
 
-deriving stock instance Show Ident
-deriving stock instance Eq Ident
-deriving stock instance Data Ident
-deriving stock instance Typeable Ident
-deriving newtype instance IsString Ident
+deriving stock   instance Show      Ident
+deriving stock   instance Eq        Ident
+deriving stock   instance Data      Ident
+deriving stock   instance Typeable  Ident
+deriving newtype instance IsString  Ident
 deriving newtype instance Semigroup Ident
-deriving newtype instance Monoid Ident
-deriving newtype instance Ord Ident
+deriving newtype instance Monoid    Ident
+deriving newtype instance Ord       Ident
 
 -- | A long identifier is used to reference OCaml values (using @Mglobal@).
 newtype Longident = Longident [Ident]
 
-deriving stock instance Show Longident
-deriving stock instance Eq Longident
-deriving stock instance Data Longident
-deriving stock instance Typeable Longident
-deriving newtype instance IsList Longident
+deriving stock   instance Show     Longident
+deriving stock   instance Eq       Longident
+deriving stock   instance Data     Longident
+deriving stock   instance Typeable Longident
+deriving newtype instance IsList   Longident
 
 --data Longident
 --  = Lident String
@@ -180,9 +180,9 @@ deriving newtype instance IsList Longident
 -- | Defines a malfunction module.
 data Mod = MMod [Binding] [Term]
 
-deriving stock instance Show Mod
-deriving stock instance Eq Mod
-deriving stock instance Data Mod
+deriving stock instance Show     Mod
+deriving stock instance Eq       Mod
+deriving stock instance Data     Mod
 deriving stock instance Typeable Mod
 
 -- | The overall syntax of malfunction terms.
@@ -208,9 +208,9 @@ data Term
   | Mblock Int [Term]
   | Mfield Int Term
 
-deriving stock instance Show Term
-deriving stock instance Eq Term
-deriving stock instance Data Term
+deriving stock instance Show     Term
+deriving stock instance Eq       Term
+deriving stock instance Data     Term
 deriving stock instance Typeable Term
 
 -- instance Uniplate Term where
@@ -255,9 +255,9 @@ data Binding
   | Named Ident Term
   | Recursive [(Ident, Term)]
 
-deriving stock instance Show Binding
-deriving stock instance Eq Binding
-deriving stock instance Data Binding
+deriving stock instance Show     Binding
+deriving stock instance Eq       Binding
+deriving stock instance Data     Binding
 deriving stock instance Typeable Binding
 
 textShow :: Show a => a -> Doc
