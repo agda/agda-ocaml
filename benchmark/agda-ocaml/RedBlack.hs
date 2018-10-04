@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP               #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module RedBlack where

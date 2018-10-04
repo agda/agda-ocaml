@@ -1,7 +1,7 @@
 name:                agda-ocaml
-version:             0.2.0.0
+version:             0.3.0.0
 synopsis:            -
-description:         Agda to Ocaml
+description:         Agda to OCaml
 license:             BSD3
 license-file:        LICENSE
 author:              Jan Mas Rovira, Frederik Hanghøj Iversen
@@ -17,21 +17,41 @@ library
   exposed-modules:     Agda.Compiler.Malfunction.AST
                      , Agda.Compiler.Malfunction.Run
                      , Agda.Compiler.Malfunction.Compiler
+                     , Agda.Compiler.Malfunction.EraseDefs
                      , Agda.Compiler.Malfunction.Main
                      , Agda.Compiler.Malfunction
                      , Agda.Compiler.Malfunction.Primitive
                      , Agda.Compiler.Malfunction.Instances
-  build-depends:       Agda >= 2.5.2
-                     , base >= 4.7 && < 5
-                     , containers == 0.5.*
-                     , extra == 1.5.*
-                     , filepath == 1.4.*
-                     , mtl == 2.2.*
-                     , pretty == 1.1.*
-                     , process == 1.4.*
-                     , temporary == 1.2.*
-                     , uniplate == 1.6.*
+  build-depends:       Agda       >= 2.6.0
+                     , base       >= 4.7  && < 5
+                     , containers >= 0.5  && < 0.6
+                     , extra      >= 1.5  && < 1.7
+                     , filepath   >= 1.4  && < 1.5
+                     , mtl        >= 2.2  && < 2.3
+                     , pretty     >= 1.1  && < 1.2
+                     , process    >= 1.4  && < 1.6.4
+                     , temporary  >= 1.2  && < 1.4
+                     , uniplate   >= 1.6  && < 1.7
   default-language:    Haskell2010
+
+  extensions:
+    NamedWildCards
+    TypeSynonymInstances
+    FlexibleInstances
+    FlexibleContexts
+    ScopedTypeVariables
+    ViewPatterns
+    DeriveGeneric
+    LambdaCase
+    TypeApplications
+    StandaloneDeriving
+    GADTs
+    GeneralizedNewtypeDeriving
+    TypeFamilies
+    MultiParamTypeClasses
+    DerivingStrategies
+    DeriveAnyClass
+    DeriveDataTypeable
 
 executable agda-ocaml
   hs-source-dirs:      app
@@ -50,18 +70,19 @@ test-suite agda-ocaml-test
   build-depends:       Agda
                      , agda-ocaml
                      , base
-                     , bytestring == 0.10.*
-                     , containers == 0.5.*
-                     , extra == 1.5.*
-                     , filepath == 1.4.*
-                     , tasty == 0.11.*
-                     , tasty-golden == 2.3.*
-                     , tasty-hunit == 0.9.*
-                     , directory == 1.3.*
+                     , bytestring   >= 0.10 && < 0.11
+                     , containers   >= 0.5  && < 0.6
+                     , extra        >= 1.5  && < 1.7
+                     , filepath     >= 1.4  && < 1.5
+                     , tasty        >= 0.11 && < 1.1.1
+                     , tasty-golden >= 2.3  && < 2.4
+                     , tasty-hunit  >= 0.9  && < 1.0
+                     , directory    >= 1.3  && < 1.4
   -- ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
-executable agda-ocaml-bench
+benchmark agda-ocaml-bench
+  type:               exitcode-stdio-1.0
   hs-source-dirs:     benchmark/agda-ocaml
   other-modules:      RedBlack
                     , Typed
@@ -70,9 +91,9 @@ executable agda-ocaml-bench
                     , AgdaListGen
   main-is:            Main.hs
   build-depends:
-                     base
+                       base
                      , directory == 1.3.*
-                     , process == 1.4.*
+                     , process    >= 1.4 && < 1.6.4
   default-language:    Haskell2010
 
 

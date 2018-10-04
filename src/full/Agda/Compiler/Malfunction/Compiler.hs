@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 {- |
 Module      :  Agda.Compiler.Malfunction.Compiler
 Maintainer  :  janmasrovira@gmail.com, hanghj@student.chalmers.se
@@ -8,6 +8,8 @@ This module includes functions that compile from <agda.readthedocs.io Agda> to
 -}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wall -Wno-unused-top-binds #-}
 module Agda.Compiler.Malfunction.Compiler
   (
   -- * Translation functions
@@ -42,24 +44,24 @@ import           Agda.Syntax.Common (NameId(..))
 import           Agda.Syntax.Literal
 import           Agda.Syntax.Treeless
 
-import           Control.Monad
-import           Control.Monad.Extra
-import           Control.Monad.Identity
-import           Data.List.Extra
+import           Control.Monad.Extra (ifM)
+import           Data.List.Extra (intercalate, firstJust, permutations, isSuffixOf)
 import           Control.Monad.Reader
-import           Data.Graph
-import           Data.Ix
-import           Data.List
+import           Data.Graph (SCC(AcyclicSCC, CyclicSCC))
+import qualified Data.Graph
+import           Data.Ix (inRange, rangeSize, range)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe
+import           Data.Maybe (fromMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Tuple.Extra
+import           Data.Tuple.Extra (first)
 import           Numeric (showHex)
-import           Data.Char
+import           Data.Char (ord)
+import           GHC.Exts (IsList(..))
 
 import           Agda.Compiler.Malfunction.AST
+import           Agda.Compiler.Malfunction.EraseDefs
 import qualified Agda.Compiler.Malfunction.Primitive as Primitive
 
 data Env = Env
@@ -112,12 +114,14 @@ mkCompilerEnv allNames conMap = Env {
     toValid :: Char -> String
     toValid c
       | any (`inRange`c) [('0','9'), ('a', 'z'), ('A', 'Z')]
-        || c`elem`"_" = [c]
+        || c == '_' = [c]
       | otherwise      = "{" ++ show (ord c) ++ "}"
 
 mlfTagRange :: (Int, Int)
 mlfTagRange = (0, 199)
 
+-- TODO Combine with `mkCompilerEnv`
+{-# ANN mkCompilerEnv2 (id @String "HLint: Reduce duplication") #-}
 mkCompilerEnv2 :: [QName] -> [[(QName, Arity)]] -> Env
 mkCompilerEnv2 allNames consByDtype = Env {
   _conMap = conMap
@@ -137,7 +141,7 @@ mkCompilerEnv2 allNames consByDtype = Env {
     toValid :: Char -> String
     toValid c
       | any (`inRange`c) [('0','9'), ('a', 'z'), ('A', 'Z')]
-        || c`elem`"_" = [c]
+        || c == '_' = [c]
       | otherwise      = "{" ++ show (ord c) ++ "}"
 
 -- | Translate a single treeless term to a list of malfunction terms.
@@ -157,12 +161,12 @@ translateM :: MonadReader Env m => TTerm -> m Term
 translateM = translateTerm
 
 translateTerm :: MonadReader Env m => TTerm -> m Term
-translateTerm tt = case tt of
+translateTerm = \case
   TVar i            -> indexToVarTerm i
   TPrim tp          -> return $ translatePrimApp tp []
   TDef name         -> translateName name
   TApp t0 args      -> translateApp t0 args
-  TLam{}            -> translateLam tt
+  tt@TLam{}         -> translateLam tt
   TLit lit          -> return $ translateLit lit
   TCon nm           -> translateCon nm []
   TLet t0 t1        -> do
@@ -170,6 +174,7 @@ translateTerm tt = case tt of
     (var, t1') <- introVar (translateTerm t1)
     return (Mlet [Named var t0'] t1')
   -- @deflt@ is the default value if all @alt@s fail.
+  -- TODO Handle the case where this is a lazy match if possible.
   TCase i _ deflt alts -> do
     t <- indexToVarTerm i
     alts' <- alternatives t
@@ -183,9 +188,10 @@ translateTerm tt = case tt of
           d <- translateTerm deflt
           translateAltsChain t (Just d) alts
   TUnit             -> return unitT
-  TSort             -> error ("Unimplemented " ++ show tt)
+  TSort             -> error "Malfunction.Compiler.translateTerm: TODO"
   TErased           -> return wildcardTerm -- TODO: so... anything can go here?
   TError TUnreachable -> return wildcardTerm
+  TCoerce{}         -> error "Malfunction.Compiler.translateTerm: TODO"
 
 -- | We use this when we don't care about the translation.
 wildcardTerm :: Term
@@ -217,7 +223,8 @@ indexToVarTerm i = do
 --   TAGuard gd rhs -> return ([], Mvar "TAGuard.undefined")
 
 translateAltsChain :: MonadReader Env m => Term -> Maybe Term -> [TAlt] -> m [([Case], Term)]
-translateAltsChain tcase defaultt [] = return $ maybe [] (\d -> [(defaultCase, d)]) defaultt
+translateAltsChain _tcase defaultt []
+  = return $ maybe [] (\d -> [(defaultCase, d)]) defaultt
 translateAltsChain tcase defaultt (ta:tas) =
   case ta of
     TALit pat body -> do
@@ -252,7 +259,6 @@ bindFields vars used termc body = case map bind varsRev of
   binds -> Mlet binds body
   where
     varsRev = zip [0..] (reverse vars)
-    arity = length vars
     bind (ix, iden)
       -- TODO: we bind all fields. The detection of used fields is bugged.
       | True || Set.member ix used = Named iden (Mfield ix termc)
@@ -284,10 +290,10 @@ introVars k ma = do
   return (names, r)
   where
     nextIdxs :: MonadReader Env m => Int -> m ([Ident], Env)
-    nextIdxs k = do
+    nextIdxs k' = do
       i0 <- asks _level
       e <- ask
-      return (map ident $ reverse [i0..i0 + k - 1], e{_level = _level e + k})
+      return (map ident $ reverse [i0..i0 + k' - 1], e{_level = _level e + k'})
 
 introVar :: MonadReader Env m => m a -> m (Ident, a)
 introVar ma = first head <$> introVars 1 ma
@@ -306,13 +312,13 @@ translateApp ft xst = case ft of
     return $ Mapply f xs
 
 ident :: Int -> Ident
-ident i = "v" ++ show i
+ident i = Ident $ "v" ++ show i
 
 translateLit :: Literal -> Term
 translateLit l = case l of
   LitNat _ x -> Mint (CBigint x)
   LitString _ s -> Mstring s
-  LitChar _ c-> Mint . CInt . fromEnum $ c
+  LitChar _ c -> Mint . CInt . fromEnum $ c
   _ -> error "unsupported literal type"
 
 translatePrimApp :: TPrim -> [Term] -> Term
@@ -332,6 +338,16 @@ translatePrimApp tp args =
     PEqQ -> wrong
     PIf -> wrong
     PSeq -> pseq
+-- OCaml does not support unsigned Integers.
+    PAdd64 -> notSupported
+    PSub64 -> notSupported
+    PMul64 -> notSupported
+    PQuot64 -> notSupported
+    PRem64 -> notSupported
+    PLt64 -> notSupported
+    PEq64 -> notSupported
+    PITo64 -> notSupported
+    P64ToI -> notSupported
   where
     aType = TInt
     intbinop op = case args of
@@ -340,6 +356,7 @@ translatePrimApp tp args =
       [] -> Mlambda ["a", "b"] $ Mintop2 op aType (Mvar "a") (Mvar "b")
       _ -> wrongargs
     -- NOTE: pseq is simply (\a b -> b) because malfunction is a strict language
+    -- TODO : Use seq from the malfunction spec.
     pseq      = case args of
       [_, b] -> b
       [_] -> Mlambda ["b"] $ Mvar "b"
@@ -347,7 +364,9 @@ translatePrimApp tp args =
       _ -> wrongargs
     -- TODO: Stub!
     -- wrong = return $ errorT $ "stub : " ++ show tp
-    wrongargs = error "unexpected number of arguments"
+    -- TODO The RedBlack.agda test gave 3 args in pseq where the last one was unreachable.
+    wrongargs = errorT $ "unexpected number of arguments : " ++ prettyShow args ++ " Report this error."
+    notSupported = error "Not supported by the OCaml backend."
     wrong = undefined
 
 
@@ -383,17 +402,17 @@ askConMap = asks _conMap
 -- Example
 -- λλ Env{_level = 2} usedVars (λ(λ ((Var 3) (λ (Var 4)))) ) == {1}
 usedVars :: MonadReader Env m => TTerm -> m (Set Int)
-usedVars term = asks _level >>= go mempty term
+usedVars term = asks _level >>= go mempty
    where
-     go vars t topnext = goterm vars t
+     go vars0 topnext = goterm vars0 term
        where
-         goterms vars = foldM (\acvars tt -> goterm acvars tt) vars
+         goterms = foldM (\acvars tt -> goterm acvars tt)
          goterm vars t = do
            nextix <- asks _level
            case t of
              (TVar v) -> return $ govar vars v nextix
-             (TApp t args) -> goterms vars (t:args)
-             (TLam t) -> snd <$> introVar (goterm vars t)
+             (TApp t0 args) -> goterms vars (t0:args)
+             (TLam t0) -> snd <$> introVar (goterm vars t0)
              (TLet t1 t2) -> do
                vars1 <- goterm vars t1
                snd <$> introVar (goterm vars1 t2)
@@ -442,7 +461,7 @@ translateCon nm ts = do
       tag <- askConTag nm
       arity <- askArity nm
       let diff = arity - length ts'
-          vs   = take diff $ map pure ['a'..]
+          vs   = take diff $ map (Ident . pure) ['a'..]
       return $ if diff == 0
       then Mblock tag ts'
       else Mlambda vs (Mblock tag (ts' ++ map Mvar vs))
@@ -459,9 +478,9 @@ builtinBool qn = do
       else return Nothing
   where
     isBuiltinTrue :: MonadReader Env m => NameId -> m Bool
-    isBuiltinTrue qn = maybe False ((==qn) . snd) <$> asks _biBool
+    isBuiltinTrue qn0 = maybe False ((==qn0) . snd) <$> asks _biBool
     isBuiltinFalse :: MonadReader Env m => NameId -> m Bool
-    isBuiltinFalse qn = maybe False ((==qn) . fst) <$> asks _biBool
+    isBuiltinFalse qn0 = maybe False ((==qn0) . fst) <$> asks _biBool
 
 -- | The argument are all data constructors grouped by datatype.
 -- returns Maybe (false NameId, true NameId)
@@ -511,7 +530,7 @@ nameToIdent :: MonadReader Env m => QName -> m Ident
 nameToIdent qn = nameIdToIdent (qnameNameId qn)
 
 nameIdToIdent' :: NameId -> Maybe String -> Ident
-nameIdToIdent' (NameId a b) msuffix = (hex a ++ "." ++ hex b ++ suffix)
+nameIdToIdent' (NameId a b) msuffix = Ident $ hex a ++ "." ++ hex b ++ suffix
   where
     suffix = maybe "" ('.':) msuffix
     hex = (`showHex` "") . toInteger
@@ -536,7 +555,7 @@ compile env bs = runTranslate (compileM bs) env
 compileM :: MonadReader Env m => [(QName, TTerm)] -> m Mod
 compileM allDefs = do
   bs <- mapM translateSCC recGrps
-  return $ MMod bs []
+  return $ MMod (eraseB bs) []
   where
     translateSCC scc = case scc of
       AcyclicSCC single -> uncurry translateBinding single
@@ -556,13 +575,13 @@ translateBindingPair q t = do
   (\t' -> (iden, t')) <$> translateTerm t
 
 dependencyGraph :: [(QName, TTerm)] -> [SCC (QName, TTerm)]
-dependencyGraph qs = stronglyConnComp [ ((qn, tt), qnameNameId qn, edgesFrom tt)
-                                    | (qn, tt) <- qs ]
+dependencyGraph qs = Data.Graph.stronglyConnComp
+  [ ((qn, tt), qnameNameId qn, edgesFrom tt) | (qn, tt) <- qs ]
   where edgesFrom = Set.toList . qnamesIdsInTerm
 
 
 qnamesIdsInTerm :: TTerm -> Set NameId
-qnamesIdsInTerm t = go t mempty
+qnamesIdsInTerm term = go term mempty
   where
     insertId q = Set.insert (qnameNameId q)
     go :: TTerm -> Set NameId -> Set NameId
@@ -575,14 +594,14 @@ qnamesIdsInTerm t = go t mempty
       TCase _ _ p alts -> foldr qnamesInAlt (go p qs) alts
       _  -> qs
       where
-        qnamesInAlt a qs = case a of
-          TACon q _ t -> insertId q (go t qs)
-          TAGuard t b -> foldr go qs [t, b]
-          TALit _ b -> go b qs
+        qnamesInAlt a qs' = case a of
+          TACon q _ t' -> insertId q (go t' qs')
+          TAGuard t' b -> foldr go qs' [t', b]
+          TALit _ b -> go b qs'
 
 -- | Defines a run-time error in Malfunction - equivalent to @error@ in Haskell.
 errorT :: String -> Term
-errorT err = Mapply (Mglobal ["Pervasives", "failwith"]) [Mstring err]
+errorT err = Mapply (Mglobal (fromList ["Pervasives", "failwith"])) [Mstring err]
 
 -- | Encodes a boolean value as a numerical Malfunction value.
 boolT :: Bool -> Term

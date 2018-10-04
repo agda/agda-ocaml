@@ -4,7 +4,8 @@ import qualified CompilerTest     as Compiler
 import           Test.Tasty
 import           System.Directory (withCurrentDirectory)
 
--- Note that we need to change directory because of where the golden test-files are located
+-- Note that we need to change directory because of where the golden
+-- test-files are located
 main :: IO ()
 main = withCurrentDirectory "test/agda-ocaml" $ defaultMain tests
 

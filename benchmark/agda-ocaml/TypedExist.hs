@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ExistentialQuantification #-}
 module TypedExist (Tree, fromList, fromList', toList) where
 {- 3rd Version, 2nd typed version -}
 {- note that the type variable b is never used anywhere, only passed on. -}

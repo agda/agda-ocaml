@@ -1,0 +1,24 @@
+- ignore: {name: "Use camelCase"}
+- ignore: {name: "Use list comprehension"}
+- ignore: {name: "Redundant if"}
+- ignore: {name: "Avoid lambda"}
+- ignore: {name: "Eta reduce"}
+- ignore: {name: "Use fmap"}  # specific for GHC 7.8 compat
+- ignore: {name: "Parse error"}  # we trust the compiler over HLint
+- ignore: {name: "Use =="}  # Creates infinite loops in `EQ` using expressions
+- ignore: {name: "Evaluate"}
+- ignore: {name: "Use &&&"}
+- ignore: {name: "Redundant compare"}
+- ignore: {name: "Use list literal"}
+- ignore: {name: "Use const"}
+- ignore: {name: "Use tuple-section"}
+- ignore: {name: "Use maybe"}
+
+# A hack to ignore some code beyond our control such as e.g.:
+#
+# muste/data/grammars/novo_modo/latin-rgl/dict/MkLatin.hs:63:21: Suggestion: Use infix
+# Found:
+#   elem (take 3 (reverse f)) ["era", "ere", "eri"]
+# Perhaps:
+#   take 3 (reverse f) `elem` ["era", "ere", "eri"]
+- ignore: {within: [Main]}

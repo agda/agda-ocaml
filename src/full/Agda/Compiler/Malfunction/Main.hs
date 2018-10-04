@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 module Agda.Compiler.Malfunction.Main (main) where
 
 import Agda.Main (runAgda)
